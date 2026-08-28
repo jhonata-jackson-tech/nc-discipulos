@@ -4,7 +4,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { signUp } from '@/lib/auth'
 import { friendlyError } from '@/lib/errors'
 import { AuthLayout } from './auth-layout'
 import { PasswordChecklist } from './password-fields'
@@ -18,9 +18,7 @@ import { ShieldCheck } from 'lucide-react'
 const schema = z
   .object({
     email: z.email('Informe o e-mail que recebeu o convite.'),
-    password: z
-      .string()
-      .refine(isStrongEnough, 'A senha não atende aos requisitos.'),
+    password: z.string().refine(isStrongEnough, 'A senha não atende aos requisitos.'),
     confirm: z.string(),
   })
   .refine((values) => values.password === values.confirm, {
@@ -47,13 +45,13 @@ export function AcceptInvitePage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null)
-    const { error } = await supabase.auth.signUp({
-      email: values.email.trim().toLowerCase(),
-      password: values.password,
-      options: { data: { invite_token: token } },
-    })
-
-    if (error) {
+    try {
+      await signUp({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+        inviteToken: token,
+      })
+    } catch (error) {
       setServerError(friendlyError(error))
       return
     }
@@ -64,7 +62,10 @@ export function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Convite não encontrado" description="Abra o link completo que a liderança enviou.">
+      <AuthLayout
+        title="Convite não encontrado"
+        description="Abra o link completo que a liderança enviou."
+      >
         <Alert variant="warning">
           <AlertTitle>Falta o código do convite</AlertTitle>
           <AlertDescription>
@@ -92,7 +93,8 @@ export function AcceptInvitePage() {
         <Alert variant="info">
           <ShieldCheck aria-hidden />
           <AlertDescription>
-            Use exatamente o e-mail que recebeu o convite. O cadastro é restrito aos integrantes do GC.
+            Use exatamente o e-mail que recebeu o convite. O cadastro é restrito aos integrantes do
+            GC.
           </AlertDescription>
         </Alert>
 
@@ -102,18 +104,43 @@ export function AcceptInvitePage() {
           </Alert>
         )}
 
-        <Field label="E-mail do convite" htmlFor="email" error={form.formState.errors.email?.message} required>
+        <Field
+          label="E-mail do convite"
+          htmlFor="email"
+          error={form.formState.errors.email?.message}
+          required
+        >
           <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
         </Field>
 
-        <Field label="Crie uma senha" htmlFor="password" error={form.formState.errors.password?.message} required>
-          <Input id="password" type="password" autoComplete="new-password" {...form.register('password')} />
+        <Field
+          label="Crie uma senha"
+          htmlFor="password"
+          error={form.formState.errors.password?.message}
+          required
+        >
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            {...form.register('password')}
+          />
         </Field>
 
         <PasswordChecklist value={password} />
 
-        <Field label="Repita a senha" htmlFor="confirm" error={form.formState.errors.confirm?.message} required>
-          <Input id="confirm" type="password" autoComplete="new-password" {...form.register('confirm')} />
+        <Field
+          label="Repita a senha"
+          htmlFor="confirm"
+          error={form.formState.errors.confirm?.message}
+          required
+        >
+          <Input
+            id="confirm"
+            type="password"
+            autoComplete="new-password"
+            {...form.register('confirm')}
+          />
         </Field>
 
         <Button type="submit" className="w-full" loading={form.formState.isSubmitting}>

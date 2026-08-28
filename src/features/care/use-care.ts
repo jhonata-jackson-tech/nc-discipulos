@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
 import { startOfWeek } from '@/lib/date'
 import type {
@@ -32,7 +32,7 @@ export function useCurrentWeek() {
     enabled: Boolean(group?.id),
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('care_weeks')
         .select('*')
         .eq('group_id', group!.id)
@@ -54,7 +54,7 @@ export function useWeeks() {
     queryKey: ['weeks', group?.id],
     enabled: Boolean(group?.id),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('care_weeks')
         .select('*')
         .eq('group_id', group!.id)
@@ -71,11 +71,7 @@ export function useWeek(weekId: string | undefined) {
     queryKey: ['week', weekId],
     enabled: Boolean(weekId),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('care_weeks')
-        .select('*')
-        .eq('id', weekId!)
-        .single()
+      const { data, error } = await db.from('care_weeks').select('*').eq('id', weekId!).single()
       if (error) throw error
       return data as CareWeek
     },
@@ -88,7 +84,7 @@ export function useAssignments(weekId: string | undefined, caregiverId?: string)
     queryKey: ['assignments', weekId, caregiverId ?? 'all'],
     enabled: Boolean(weekId),
     queryFn: async () => {
-      let query = supabase.from('care_assignments').select(ASSIGNMENT_SELECT).eq('week_id', weekId!)
+      let query = db.from('care_assignments').select(ASSIGNMENT_SELECT).eq('week_id', weekId!)
       if (caregiverId) query = query.eq('caregiver_id', caregiverId)
 
       const { data, error } = await query
@@ -105,7 +101,7 @@ export function useContactLogs(assignmentId: string | undefined) {
     queryKey: ['contact-logs', assignmentId],
     enabled: Boolean(assignmentId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('contact_logs')
         .select('*, author:profiles!contact_logs_author_id_fkey(full_name)')
         .eq('assignment_id', assignmentId!)
@@ -130,7 +126,7 @@ export function useLogContact() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: LogContactInput) => {
-      const { error } = await supabase.rpc('log_contact', {
+      const { error } = await db.rpc('log_contact', {
         p_assignment_id: input.assignmentId,
         p_channel: input.channel,
         p_contacted_on: input.contactedOn,
@@ -166,7 +162,7 @@ export function useTransferRequests(profileId: string | undefined) {
     queryKey: ['transfers', profileId],
     enabled: Boolean(profileId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('transfer_requests')
         .select(
           `*, assignment:care_assignments(${ASSIGNMENT_SELECT}),
@@ -185,7 +181,7 @@ export function useRequestTransfer() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { assignmentId: string; recipientId: string; reason: string }) => {
-      const { error } = await supabase.rpc('request_transfer', {
+      const { error } = await db.rpc('request_transfer', {
         p_assignment_id: input.assignmentId,
         p_recipient_id: input.recipientId,
         p_reason: input.reason,
@@ -204,7 +200,7 @@ export function useRespondTransfer() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { requestId: string; accept: boolean; note?: string }) => {
-      const { error } = await supabase.rpc('respond_transfer', {
+      const { error } = await db.rpc('respond_transfer', {
         p_request_id: input.requestId,
         p_accept: input.accept,
         p_note: input.note ?? null,
@@ -223,7 +219,7 @@ export function useCancelTransfer() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (requestId: string) => {
-      const { error } = await supabase.rpc('cancel_transfer', { p_request_id: requestId })
+      const { error } = await db.rpc('cancel_transfer', { p_request_id: requestId })
       if (error) throw error
     },
     onSuccess: () => {
@@ -237,7 +233,7 @@ export function useReassignCare() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { assignmentId: string; newCaregiverId: string; reason: string }) => {
-      const { error } = await supabase.rpc('reassign_care', {
+      const { error } = await db.rpc('reassign_care', {
         p_assignment_id: input.assignmentId,
         p_new_caregiver_id: input.newCaregiverId,
         p_reason: input.reason,
@@ -257,7 +253,7 @@ export function useWeekSummary(weekId: string | undefined, enabled = true) {
     queryKey: ['week-summary', weekId],
     enabled: Boolean(weekId) && enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('group_week_summary', { p_week_id: weekId! })
+      const { data, error } = await db.rpc('group_week_summary', { p_week_id: weekId! })
       if (error) throw error
       return data as WeekSummary
     },

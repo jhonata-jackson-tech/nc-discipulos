@@ -30,7 +30,12 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
@@ -38,7 +43,7 @@ export default defineConfig({
         navigateFallback: '/index.html',
         // Nunca interceptar chamadas autenticadas: dados de cuidado e feedback
         // sensivel jamais podem ficar em cache persistente do service worker.
-        navigateFallbackDenylist: [/^\/auth\//, /^\/rest\//, /^\/functions\//],
+        navigateFallbackDenylist: [/^\/auth\//, /^\/rest\//, /^\/api\//],
         runtimeCaching: [
           {
             urlPattern: ({ url }: { url: URL }) => url.origin === 'https://fonts.googleapis.com',
@@ -58,5 +63,19 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
-  server: { port: 5173 },
+  // Em desenvolvimento o Vite faz o papel do Caddy: a aplicacao continua
+  // falando com `/rest/v1`, `/auth` e `/api` na propria origem, e cada um
+  // desses caminhos vai para o container certo do `docker compose`.
+  server: {
+    port: 5173,
+    proxy: {
+      '/rest/v1': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/rest\/v1/, ''),
+      },
+      '/auth': 'http://localhost:3001',
+      '/api': 'http://localhost:3001',
+    },
+  },
 })

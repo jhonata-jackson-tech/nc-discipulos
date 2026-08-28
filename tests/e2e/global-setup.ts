@@ -1,34 +1,31 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import {
+  adminClient,
+  configurado,
+  darAcesso,
+  encerrar,
+  removerConta,
+  type LocalClient,
+} from '../../scripts/lib/local.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 export const STATE_FILE = resolve(HERE, '.state.json')
-
-const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
 
 /**
  * Prepara um GC de teste completo: lideranca, discipulado, irmaos, uma semana
  * publicada e as atribuicoes que os testes vao exercitar.
  */
 export default async function globalSetup() {
-  if (!ANON_KEY || !SERVICE_ROLE_KEY) {
+  if (!configurado) {
     writeFileSync(STATE_FILE, JSON.stringify({ ready: false }))
-    console.warn(
-      '\n[e2e] SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY ausentes: os testes serão pulados.\n',
-    )
+    console.warn('\n[e2e] DATABASE_URL/JWT_SECRET ausentes no .env: os testes serão pulados.\n')
     return
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
+  const admin = adminClient()
   await removePreviousRuns(admin)
 
   const tag = randomUUID().slice(0, 6)
@@ -65,18 +62,7 @@ export default async function globalSetup() {
       .from('group_memberships')
       .insert({ group_id: group!.id, profile_id: profile.id, role: person.role })
 
-    const token = randomUUID().replace(/-/g, '')
-    await admin.from('invites').insert({ profile_id: profile.id, email, token_hash: sha256(token) })
-
-    const anon = createClient(SUPABASE_URL, ANON_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    })
-    const { error: signUpError } = await anon.auth.signUp({
-      email,
-      password,
-      options: { data: { invite_token: token } },
-    })
-    if (signUpError) throw signUpError
+    await darAcesso(admin, profile.id, email, password)
 
     accounts[key] = { email, password, profileId: profile.id }
   }
@@ -161,13 +147,17 @@ export default async function globalSetup() {
       2,
     ),
   )
+
+  // A conexao direta com o Postgres so existe para apagar contas; sem fechar,
+  // o Playwright ficaria esperando um handle aberto.
+  await encerrar()
 }
 
 /**
  * Cada execucao cria o proprio GC de teste. Limpamos os anteriores para que uma
  * semana antiga nunca seja confundida com a semana desta rodada.
  */
-async function removePreviousRuns(admin: SupabaseClient) {
+async function removePreviousRuns(admin: LocalClient) {
   const { data: leftovers } = await admin
     .from('profiles')
     .select('id, user_id')
@@ -206,7 +196,7 @@ async function removePreviousRuns(admin: SupabaseClient) {
   if (ids.length > 0) {
     await admin.from('profiles').delete().in('id', ids)
     for (const row of leftovers ?? []) {
-      if (row.user_id) await admin.auth.admin.deleteUser(row.user_id)
+      if (row.user_id) await removerConta(row.user_id)
     }
   }
 }

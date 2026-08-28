@@ -1,8 +1,13 @@
 import * as React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ShieldCheck } from 'lucide-react'
+import { KeyRound, ShieldCheck } from 'lucide-react'
+import { toast } from 'sonner'
+import { changePassword } from '@/lib/auth'
+import { friendlyError } from '@/lib/errors'
+import { PasswordChecklist } from '@/features/auth/password-fields'
+import { isStrongEnough } from '@/features/auth/password-rules'
 import { useSession } from '@/features/auth/session-context'
 import { useUpdateMember } from '@/features/members/use-members'
 import { careGenderLabel, roleLabelFor } from '@/lib/labels'
@@ -19,6 +24,17 @@ const schema = z.object({
   phone: z.string().optional(),
   birth_date: z.string().optional(),
 })
+
+const passwordSchema = z
+  .object({
+    current: z.string().min(1, 'Informe a senha atual.'),
+    password: z.string().refine(isStrongEnough, 'A senha não atende aos requisitos.'),
+    confirm: z.string(),
+  })
+  .refine((values) => values.password === values.confirm, {
+    message: 'As senhas não conferem.',
+    path: ['confirm'],
+  })
 
 export function ProfilePage() {
   const { profile, role } = useSession()
@@ -51,14 +67,16 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Meus dados" description="Mantenha seu contato e aniversário atualizados." />
+      <PageHeader
+        title="Meus dados"
+        description="Mantenha seu contato e aniversário atualizados."
+      />
 
       <Card className="max-w-xl">
         <CardHeader>
           <CardTitle>Dados pessoais</CardTitle>
           <CardDescription>
-            {profile?.email} ·{' '}
-            {role ? roleLabelFor(role, profile?.care_gender ?? null) : ''}
+            {profile?.email} · {role ? roleLabelFor(role, profile?.care_gender ?? null) : ''}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -100,6 +118,103 @@ export function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      <PasswordCard />
     </div>
+  )
+}
+
+/**
+ * Trocar a propria senha e o unico caminho automatico que existe: nao ha
+ * recuperacao por e-mail. Quem perdeu a senha fala com a lideranca, que
+ * cadastra uma nova - e a pessoa troca aqui depois de entrar.
+ */
+function PasswordCard() {
+  const form = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { current: '', password: '', confirm: '' },
+  })
+  const [serverError, setServerError] = React.useState<string | null>(null)
+  const nova = useWatch({ control: form.control, name: 'password' })
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    setServerError(null)
+    try {
+      await changePassword(values.current, values.password)
+    } catch (error) {
+      setServerError(friendlyError(error))
+      return
+    }
+    form.reset({ current: '', password: '', confirm: '' })
+    toast.success('Senha atualizada.')
+  })
+
+  return (
+    <Card className="max-w-xl">
+      <CardHeader>
+        <CardTitle>Trocar senha</CardTitle>
+        <CardDescription>
+          Ao salvar, as sessões abertas em outros aparelhos são encerradas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {serverError && (
+            <Alert variant="danger">
+              <AlertDescription>{serverError}</AlertDescription>
+            </Alert>
+          )}
+
+          <Field
+            label="Senha atual"
+            htmlFor="current"
+            required
+            error={form.formState.errors.current?.message}
+          >
+            <Input
+              id="current"
+              type="password"
+              autoComplete="current-password"
+              {...form.register('current')}
+            />
+          </Field>
+
+          <Field
+            label="Nova senha"
+            htmlFor="new-password"
+            required
+            error={form.formState.errors.password?.message}
+          >
+            <Input
+              id="new-password"
+              type="password"
+              autoComplete="new-password"
+              {...form.register('password')}
+            />
+          </Field>
+
+          <PasswordChecklist value={nova} />
+
+          <Field
+            label="Repita a nova senha"
+            htmlFor="confirm"
+            required
+            error={form.formState.errors.confirm?.message}
+          >
+            <Input
+              id="confirm"
+              type="password"
+              autoComplete="new-password"
+              {...form.register('confirm')}
+            />
+          </Field>
+
+          <Button type="submit" loading={form.formState.isSubmitting}>
+            <KeyRound aria-hidden />
+            Salvar senha
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   )
 }

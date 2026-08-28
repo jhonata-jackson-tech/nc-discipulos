@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  // O algoritmo vem de `src/domain`, compartilhado com o frontend. Os testes
+  // dele rodam no Vitest, que nao existe aqui.
+  "include": ["src/**/*.ts", "../src/domain/**/*.ts"],
+  "exclude": ["../src/domain/**/*.test.ts"]
+}

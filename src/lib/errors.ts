@@ -1,18 +1,12 @@
 /**
  * Traducao de erros para uma linguagem que a lideranca entenda.
  *
- * O banco ja devolve mensagens em portugues nas regras de negocio; aqui
- * cobrimos os erros tecnicos do Supabase e da rede.
+ * O banco e o servico de autenticacao ja respondem em portugues; o que sobra
+ * para traduzir aqui sao as violacoes de constraint, que chegam cruas do
+ * Postgres, e as falhas de rede.
  */
 const AUTH_MESSAGES: Record<string, string> = {
-  'Invalid login credentials': 'E-mail ou senha incorretos.',
-  'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
-  'User already registered': 'Este e-mail já possui acesso.',
-  'New password should be different from the old password.':
-    'A nova senha precisa ser diferente da anterior.',
-  'Password should be at least 8 characters.': 'A senha precisa ter pelo menos 8 caracteres.',
   'Auth session missing!': 'Sua sessão expirou. Entre novamente.',
-  'Email rate limit exceeded': 'Muitas tentativas seguidas. Aguarde alguns minutos.',
 }
 
 export function friendlyError(error: unknown): string {

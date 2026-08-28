@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { adminClient, type LocalClient } from '../../scripts/lib/local.mjs'
 import { STATE_FILE } from './global-setup'
 
 export interface E2EState {
@@ -41,12 +41,8 @@ export function nameOf(who: string) {
 }
 
 /** Cliente administrativo, usado apenas para preparar cenarios de teste. */
-export function admin(): SupabaseClient {
-  return createClient(
-    process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321',
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
+export function admin(): LocalClient {
+  return adminClient()
 }
 
 /**

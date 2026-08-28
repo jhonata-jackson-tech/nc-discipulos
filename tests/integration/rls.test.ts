@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { adminClient, anonClient, cleanup, createUser, hasSupabase, type TestUser } from './helpers'
+import { PostgrestClient } from '@supabase/postgrest-js'
+import { REST_URL, criarConta, type LocalClient } from '../../scripts/lib/local.mjs'
+import { adminClient, cleanup, createUser, encerrar, hasBackend, type TestUser } from './helpers'
 
 /**
  * Testes de permissao contra o banco real.
@@ -10,11 +11,11 @@ import { adminClient, anonClient, cleanup, createUser, hasSupabase, type TestUse
  * Eles existem porque a interface nao e a fonte de verdade: qualquer regra que
  * importe precisa se sustentar mesmo quando alguem chama a API diretamente.
  *
- *   npx supabase start
- *   SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... npm test
+ *   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+ *   npm run test:integration
  */
-describe.skipIf(!hasSupabase)('permissoes e regras no banco', () => {
-  let admin: SupabaseClient
+describe.skipIf(!hasBackend)('permissoes e regras no banco', () => {
+  let admin: LocalClient
   let groupId: string
   let leader: TestUser
   let leaderFemale: TestUser
@@ -100,21 +101,26 @@ describe.skipIf(!hasSupabase)('permissoes e regras no banco', () => {
   }, 60_000)
 
   afterAll(async () => {
-    if (hasSupabase) await cleanup(admin, created, groupId)
+    if (hasBackend) {
+      await cleanup(admin, created, groupId)
+      await encerrar()
+    }
   }, 60_000)
 
   // ------------------------------------------------------------------ acesso
   it('recusa cadastro sem convite valido', async () => {
-    const client = anonClient()
-    const { error } = await client.auth.signUp({
-      email: `intruso.${randomUUID().slice(0, 6)}@teste.cuidar.local`,
-      password: 'Senha-forte-123',
-    })
-    expect(error).not.toBeNull()
+    await expect(
+      criarConta({
+        email: `intruso.${randomUUID().slice(0, 6)}@teste.cuidar.local`,
+        password: 'Senha-forte-123',
+        inviteToken: randomUUID().replace(/-/g, ''),
+      }),
+    ).rejects.toThrow()
   })
 
   it('nao expoe nada ao visitante nao autenticado', async () => {
-    const client = anonClient()
+    // Sem token, o PostgREST assume `anon` - que nao le nada do dominio.
+    const client = new PostgrestClient(REST_URL)
     const { data, error } = await client.from('profiles').select('*')
     expect(data ?? []).toHaveLength(0)
     expect(error === null || error.code === '42501').toBe(true)

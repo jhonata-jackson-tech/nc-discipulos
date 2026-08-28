@@ -10,23 +10,17 @@
  * pela liderança - por isso cada integrante recebe uma nota administrativa
  * avisando disso, e `npm run demo:limpar` devolve tudo ao estado do seed.
  *
- *   SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-demo.mjs
+ *   node scripts/seed-demo.mjs
  */
-import { createHash, randomUUID } from 'node:crypto'
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
-import { createClient } from '@supabase/supabase-js'
+import { adminClient, configurado, darAcesso, entrar, gerarSemana } from './lib/local.mjs'
 
-const URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const ANON = process.env.SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!ANON || !SERVICE) {
-  console.error('Defina SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY (veja `npx supabase status`).')
+if (!configurado) {
+  console.error('Defina DATABASE_URL e JWT_SECRET no .env (veja .env.example).')
   process.exit(1)
 }
 
-const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
-const sha256 = (v) => createHash('sha256').update(v).digest('hex')
+const admin = adminClient()
 
 const AVISO_GENERO =
   'Gênero de cuidado preenchido pelo seed de demonstração. Confirme com a pessoa antes de usar de verdade.'
@@ -172,20 +166,12 @@ for (const semana of semanas) {
   const inicio = iso(semana.inicio)
   await admin.from('care_weeks').delete().eq('group_id', grupo.id).eq('starts_on', inicio)
 
-  const resposta = await fetch(`${URL}/functions/v1/generate-week`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${contaLider.token}`,
-      apikey: ANON,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ groupId: grupo.id, startsOn: inicio }),
-  })
-
-  const corpo = await resposta.json()
-  if (!resposta.ok) {
-    console.error(`A geração de ${inicio} falhou:`, corpo)
-    console.error('A Edge Function está no ar? `npx supabase functions serve generate-week`')
+  let corpo
+  try {
+    corpo = await gerarSemana(contaLider.token, { groupId: grupo.id, startsOn: inicio })
+  } catch (falha) {
+    console.error(`A geração de ${inicio} falhou:`, falha.message)
+    console.error('O serviço está no ar? `docker compose ... up -d api`')
     process.exit(1)
   }
 
@@ -480,27 +466,12 @@ async function garantirAcesso(nome, email, senha) {
     .single()
   if (error) throw error
 
-  const anon = createClient(URL, ANON, { auth: { persistSession: false } })
-
   if (!pessoa.user_id) {
-    const token = randomUUID().replace(/-/g, '')
-    await admin.from('invites').insert({ profile_id: pessoa.id, email, token_hash: sha256(token) })
-
-    const { error: erroCadastro } = await anon.auth.signUp({
-      email,
-      password: senha,
-      options: { data: { invite_token: token } },
-    })
-    if (erroCadastro) throw erroCadastro
+    await darAcesso(admin, pessoa.id, email, senha)
   }
 
-  const { data: sessao, error: erroLogin } = await anon.auth.signInWithPassword({
-    email: pessoa.email ?? email,
-    password: senha,
-  })
-  if (erroLogin) throw erroLogin
-
-  return { token: sessao.session.access_token, profileId: pessoa.id }
+  const { sessao } = await entrar(pessoa.email ?? email, senha)
+  return { token: sessao.access_token, profileId: pessoa.id }
 }
 
 /**

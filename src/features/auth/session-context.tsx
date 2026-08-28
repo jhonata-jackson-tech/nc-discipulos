@@ -1,7 +1,7 @@
 import * as React from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
+import { getSession, onAuthStateChange, signOut as endSession, type Session } from '@/lib/auth'
 import type { AppRole, Group, Profile } from '@/types/database'
 
 interface SessionValue {
@@ -22,23 +22,17 @@ interface SessionValue {
 const SessionContext = React.createContext<SessionValue | null>(null)
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = React.useState<Session | null>(null)
-  const [authReady, setAuthReady] = React.useState(false)
+  // A sessao ja esta em memoria quando o modulo carrega - ler o token nao e
+  // uma ida ao servidor. Por isso o estado nasce pronto, sem passar por uma
+  // tela de carregamento que existia so para esperar o Supabase responder.
+  const [session, setSession] = React.useState<Session | null>(getSession)
   const queryClient = useQueryClient()
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setAuthReady(true)
-    })
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
+    return onAuthStateChange((next) => {
       setSession(next)
-      setAuthReady(true)
       if (!next) queryClient.clear()
     })
-
-    return () => listener.subscription.unsubscribe()
   }, [queryClient])
 
   const userId = session?.user?.id
@@ -48,7 +42,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     enabled: Boolean(userId),
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('profiles')
         .select('*')
         .eq('user_id', userId!)
@@ -67,7 +61,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     enabled: Boolean(profileQuery.data?.id),
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('group_memberships')
         .select('group:groups(*)')
         .eq('profile_id', profileQuery.data!.id)
@@ -81,7 +75,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (linked) return linked
 
       // Integrante ainda sem associacao: cai no unico GC configurado.
-      const fallback = await supabase
+      const fallback = await db
         .from('groups')
         .select('*')
         .order('created_at')
@@ -105,12 +99,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       isLeader: role === 'leader',
       isSupervisor: role === 'supervisor',
       isLeadership: role === 'leader' || role === 'supervisor',
-      loading: !authReady || (Boolean(userId) && profileQuery.isLoading),
+      loading: Boolean(userId) && profileQuery.isLoading,
       refresh: async () => {
         await queryClient.invalidateQueries({ queryKey: ['session-profile'] })
       },
       signOut: async () => {
-        await supabase.auth.signOut()
+        await endSession()
         queryClient.clear()
       },
     }),
@@ -121,7 +115,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       role,
       profileQuery.isSuccess,
       profileQuery.isLoading,
-      authReady,
       userId,
       queryClient,
     ],

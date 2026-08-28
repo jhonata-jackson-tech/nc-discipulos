@@ -1,0 +1,105 @@
+# =============================================================================
+# Cuidar GC :: a aplicacao inteira em uma maquina
+#
+#   db         Postgres 17 - o banco e daqui, com volume no proprio host
+#   migrate    aplica migrations, papeis e (na primeira vez) o seed; sai
+#   postgrest  publica o schema `public` em /rest/v1, validando o JWT
+#   api        autenticacao e geracao da semana
+#   web        Caddy: HTTPS automatico, serve a PWA e roteia o resto
+#
+# Nenhuma porta de banco e exposta para fora: `db`, `postgrest` e `api` so
+# existem na rede interna do compose. O unico jeito de entrar e pelo Caddy.
+# =============================================================================
+name: cuidar-gc
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cuidar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      # Datas nascem e vivem em UTC; a traducao para America/Sao_Paulo e da tela.
+      TZ: UTC
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cuidar}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    image: postgres:17-alpine
+    restart: 'no'
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-cuidar}
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:?defina AUTHENTICATOR_PASSWORD no .env}
+      AUTH_SERVICE_PASSWORD: ${AUTH_SERVICE_PASSWORD:?defina AUTH_SERVICE_PASSWORD no .env}
+    volumes:
+      - ./db:/db:ro
+      - ./scripts/migrate.sh:/migrate.sh:ro
+    entrypoint: ['/bin/sh', '/migrate.sh']
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@db:5432/${POSTGRES_DB:-cuidar}
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      PGRST_SERVER_PORT: '3000'
+      # Teto de linhas por resposta, como o projeto ja usava.
+      PGRST_DB_MAX_ROWS: '1000'
+      PGRST_OPENAPI_MODE: disabled
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgres://auth_service:${AUTH_SERVICE_PASSWORD}@db:5432/${POSTGRES_DB:-cuidar}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: '3001'
+      ACCESS_TOKEN_TTL_SECONDS: '3600'
+      REFRESH_TOKEN_TTL_DAYS: '30'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3001/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    restart: unless-stopped
+    depends_on: [api, postgrest]
+    environment:
+      DOMAIN: ${DOMAIN:?defina DOMAIN no .env}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

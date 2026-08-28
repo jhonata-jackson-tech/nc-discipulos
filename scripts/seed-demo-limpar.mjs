@@ -3,19 +3,16 @@
  * integrantes ao estado do seed - sem gênero de cuidado confirmado, sem
  * discipulado e sem acesso.
  *
- *   SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-demo-limpar.mjs
+ *   node scripts/seed-demo-limpar.mjs
  */
-import { createClient } from '@supabase/supabase-js'
+import { adminClient, configurado, encerrar, removerConta } from './lib/local.mjs'
 
-const URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!SERVICE) {
-  console.error('Defina SUPABASE_SERVICE_ROLE_KEY (veja `npx supabase status`).')
+if (!configurado) {
+  console.error('Defina DATABASE_URL e JWT_SECRET no .env (veja .env.example).')
   process.exit(1)
 }
 
-const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
+const admin = adminClient()
 
 const { data: grupo, error } = await admin
   .from('groups')
@@ -85,10 +82,12 @@ await admin
   .in('id', ids)
 
 for (const pessoa of pessoas ?? []) {
-  if (pessoa.user_id) await admin.auth.admin.deleteUser(pessoa.user_id)
+  if (pessoa.user_id) await removerConta(pessoa.user_id)
 }
 
 await admin.from('groups').update({ setup_completed_at: null }).eq('id', grupo.id)
+
+await encerrar()
 
 console.log('\n✓ banco devolvido ao estado do seed.')
 console.log('Remova a linha VITE_DEMO_ACCOUNTS do .env.local para esconder o seletor de perfil.\n')

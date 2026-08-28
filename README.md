@@ -12,25 +12,26 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 ## Sumário
 
 - [O que já está implementado](#o-que-já-está-implementado)
+- [Arquitetura](#arquitetura)
 - [Stack](#stack)
 - [Como rodar localmente](#como-rodar-localmente)
 - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Banco de dados](#banco-de-dados)
 - [Primeiro acesso da liderança](#primeiro-acesso-da-liderança)
+- [Senhas](#senhas)
 - [A regra de distribuição](#a-regra-de-distribuição)
 - [Papéis e permissões](#papéis-e-permissões)
 - [Testes](#testes)
 - [PWA](#pwa)
-- [Deploy](#deploy)
+- [Deploy na VPS](#deploy-na-vps)
 - [Estrutura de pastas](#estrutura-de-pastas)
-
----
 
 ## O que já está implementado
 
 | Área | Situação |
 | --- | --- |
-| Autenticação por convite, login, recuperação e primeiro acesso | ✅ |
+| Autenticação por convite, login e primeiro acesso | ✅ |
+| Troca de senha pelo próprio integrante | ✅ |
 | Papéis, integrantes, discipulado e restrições de rodízio | ✅ |
 | Geração da semana no servidor, revisão, reorganização e publicação | ✅ |
 | Minha semana, registro de contato, feedback e níveis de atenção | ✅ |
@@ -42,8 +43,9 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Tema claro, escuro e "seguir o sistema" | ✅ |
 | Testes unitários, de regras no banco, de RLS e end-to-end | ✅ |
 
-Notificações push (fora do app) ficaram preparadas na arquitetura, mas não estão
-ligadas — veja [Pendências](#pendências).
+Não há recuperação de senha automática — é uma decisão, e está explicada em
+[Senhas](#senhas). Notificações push (fora do app) ficaram preparadas na
+arquitetura, mas não estão ligadas — veja [Pendências](#pendências).
 
 ---
 
@@ -52,8 +54,7 @@ ligadas — veja [Pendências](#pendências).
 Para avaliar o produto com o GC cheio, sem precisar preencher tudo à mão:
 
 ```bash
-npx supabase start
-npx supabase functions serve generate-week   # em outro terminal
+npm run dev:servicos   # banco, migrations, PostgREST e API
 npm run demo
 npm run dev
 ```
@@ -78,13 +79,47 @@ produção o componente inteiro — e as credenciais — some do bundle.
 
 ---
 
+## Arquitetura
+
+Tudo roda em uma máquina só, em containers, e tudo responde na mesma origem —
+não existe chave de API no navegador nem CORS para configurar.
+
+```
+                        ┌───────────── VPS ─────────────┐
+navegador ──HTTPS──▶ caddy ──┬── /            → a PWA (arquivos estáticos)
+                             ├── /rest/v1/*   → postgrest ──┐
+                             └── /auth, /api  → api (Node) ─┤
+                                                            ▼
+                                                        postgres
+```
+
+| Serviço | Papel |
+| --- | --- |
+| `postgres` | O banco. Schema, regras de negócio e **toda** a decisão de acesso (RLS) |
+| `postgrest` | Publica o schema `public` como API REST. Valida o JWT e assume o papel `authenticated` |
+| `api` | O que o PostgREST não faz: emitir a sessão (login, convite, troca de senha) e rodar a geração da semana |
+| `caddy` | HTTPS automático, fallback de SPA e roteamento por caminho |
+
+A peça que amarra tudo é o JWT: a `api` assina, o `postgrest` confere com o
+mesmo segredo, e `auth.uid()` lê o `sub` dentro do banco. É por isso que as
+políticas de RLS, escritas contra `auth.uid()`, continuam valendo sem uma linha
+de mudança — o navegador nunca informa quem é, ele apenas apresenta um token
+assinado.
+
+O serviço `api` também não tem caminho privilegiado: para gerar a semana, ele
+assume a identidade de quem pediu (`set local role authenticated`) e passa pela
+mesma RLS de todo mundo.
+
+---
+
 ## Stack
 
 - **React 19 + TypeScript + Vite 8**
 - **Tailwind CSS v4** com tokens próprios e componentes no estilo shadcn/ui
 - **React Router 7**, **TanStack Query 5**, **React Hook Form + Zod 4**
-- **Supabase**: PostgreSQL, Auth, Row Level Security, funções de servidor e uma
-  Edge Function para a geração semanal
+- **PostgreSQL 17** com Row Level Security e funções de servidor
+- **PostgREST** para os dados, **Express 5** para sessão e geração da semana
+- **Docker Compose** e **Caddy** (HTTPS automático) na VPS
 - **vite-plugin-pwa** (manifest + service worker), **Lucide Icons**
 - Tema claro/escuro por classe no `<html>`, com "seguir o sistema" como opção
 - **Vitest + Testing Library** e **Playwright**
@@ -94,60 +129,67 @@ produção o componente inteiro — e as credenciais — some do bundle.
 
 ## Como rodar localmente
 
-Requisitos: **Node 20+**, **Docker** (para o Supabase local).
+Requisitos: **Node 20+** e **Docker**.
 
 ```bash
 # 1. dependências
 npm install
 
-# 2. Supabase local (sobe Postgres, Auth, Storage e Studio)
-npx supabase start
+# 2. segredos do ambiente local
+cp .env.example .env
+# gere cada senha com: openssl rand -hex 32
 
-# 3. aplica migrations e o seed dos 33 integrantes
-npx supabase db reset
+# 3. banco, migrations, seed, PostgREST e API
+npm run dev:servicos
 
-# 4. variáveis de ambiente
-cp .env.example .env.local
-# preencha com a API URL e a anon key que o `supabase start` imprimiu
-
-# 5. aplicação
+# 4. aplicação
 npm run dev
 ```
 
-A aplicação sobe em <http://localhost:5173> e o Studio do banco em
-<http://localhost:54323>.
+A aplicação sobe em <http://localhost:5173>. O Vite faz, em desenvolvimento, o
+mesmo roteamento que o Caddy faz em produção: `/rest/v1` vai para o PostgREST e
+`/auth` e `/api` vão para o serviço de sessão. Por isso o código não muda entre
+os dois ambientes — e o `dist` nunca carrega uma URL embutida.
 
-### Sem Docker
+`npm run dev:parar` derruba os containers (o volume do banco fica).
 
-Você também pode apontar para um projeto Supabase na nuvem: crie o projeto,
-rode `npx supabase link --project-ref <ref>` e depois `npx supabase db push`.
+Para olhar o banco direto:
+
+```bash
+docker compose exec db psql -U postgres -d cuidar
+```
 
 ---
 
 ## Variáveis de ambiente
 
-Crie `.env.local` a partir de `.env.example`:
+Um arquivo só, `.env`, lido pelo `docker compose`. Não vai para o Git.
 
-| Variável | Onde usar | Descrição |
+| Variável | Onde | Descrição |
 | --- | --- | --- |
-| `VITE_SUPABASE_URL` | frontend | URL do projeto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | frontend | Chave pública (`anon`). Nunca use a `service_role` aqui |
-| `SUPABASE_SERVICE_ROLE_KEY` | testes | Só para preparar dados nos testes de integração e e2e |
-| `SUPABASE_ANON_KEY` | testes | Mesma chave pública, lida fora do Vite |
-| `E2E_BASE_URL` | testes | URL da aplicação nos testes Playwright |
+| `DOMAIN` | Caddy | Domínio da aplicação; é com ele que o certificado é emitido |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | banco | Credenciais do Postgres |
+| `AUTHENTICATOR_PASSWORD` | PostgREST | Senha do papel de conexão do PostgREST |
+| `AUTH_SERVICE_PASSWORD` | API | Senha do papel de conexão do serviço de sessão |
+| `JWT_SECRET` | API + PostgREST | Assina e confere a sessão. Trocar derruba todas as sessões abertas |
+| `DATABASE_URL` | scripts e testes | Conexão direta, só na sua máquina |
+| `E2E_BASE_URL` | testes | Opcional: aponta o Playwright para uma aplicação já no ar |
 
-O arquivo `.env.local` está no `.gitignore`. Nenhuma chave real deve ser
-commitada.
+O frontend **não** tem variável de ambiente: ele fala com a própria origem.
+`VITE_API_URL` existe apenas como escape, caso um dia a API responda em outro
+domínio.
 
 ---
 
 ## Banco de dados
 
-As migrations ficam em `supabase/migrations/`, na ordem em que devem ser
-aplicadas:
+As migrations ficam em `db/migrations/`, aplicadas em ordem alfabética pelo
+container `migrate` a cada subida. Cada uma entra uma única vez, registrada em
+`migrations.applied`, e dentro de uma transação.
 
 | Arquivo | Conteúdo |
 | --- | --- |
+| `..._auth.sql` | Schema `auth`, contas, sessões renováveis e `auth.uid()` |
 | `..._core.sql` | Enums, `groups`, `profiles`, `group_memberships`, `discipleship_links`, `member_notes` |
 | `..._care.sql` | `care_weeks`, `care_assignments`, `contact_logs`, `transfer_requests`, `pairing_restrictions` |
 | `..._activities.sql` | `activities` e `activity_assignees` |
@@ -158,32 +200,36 @@ aplicadas:
 | `..._rpc_week.sql` | Geração, publicação, contatos, transferências e reorganização |
 | `..._rpc_admin.sql` | Atividades, supervisão, integrantes e indicadores |
 
-Comandos úteis:
+Fora de `migrations/`, dois arquivos que dependem de ambiente e por isso não são
+migration: `db/roles.sql` (papéis de conexão, com as senhas do `.env`) e
+`db/dev-service-role.sql`, que só roda em desenvolvimento.
 
-```bash
-npm run db:reset      # recria o banco, aplica migrations e roda o seed
-npm run db:push       # aplica migrations em um projeto remoto vinculado
-npm run gen:types     # regenera os tipos a partir do schema real
-```
+Para escrever uma migration nova, crie o arquivo em `db/migrations/` com um
+carimbo maior que o da última e rode `npm run dev:servicos` — ou
+`docker compose up migrate` em produção, que o `deploy` já faz.
 
-### Verificação rápida sem Supabase
+### Verificação rápida, sem subir nada
 
 `scripts/verify-migrations.sh` sobe um Postgres descartável no Docker, aplica
 todas as migrations, roda o seed duas vezes (conferindo a idempotência) e
-executa `supabase/tests/rules.sql`, que exercita as regras que o banco precisa
+executa `db/tests/rules.sql`, que exercita as regras que o banco precisa
 garantir sozinho:
 
 ```bash
-./scripts/verify-migrations.sh
+npm run verify:db
 ```
 
 ### Seed
 
-`supabase/seed.sql` cria o GC e os 33 integrantes com a grafia exata recebida da
+`db/seed.sql` cria o GC e os 33 integrantes com a grafia exata recebida da
 liderança. **Nada é inventado**: e-mail, telefone, aniversário, senha, gênero de
 cuidado e vínculo de discipulado ficam em branco e são confirmados pela
 liderança no assistente de primeiro acesso. O seed é idempotente — rodar de novo
 não duplica ninguém.
+
+O `migrate` só aplica o seed quando **não existe nenhum integrante** no banco.
+É o que impede que alguém desligado pela liderança volte sozinho no próximo
+`docker compose up`.
 
 ---
 
@@ -193,10 +239,11 @@ Não existe cadastro público. A conta só nasce a partir de um convite válido,
 primeiro convite precisa ser emitido diretamente no banco, porque ainda não há
 ninguém logado para emiti-lo.
 
-No **SQL Editor** do Supabase (ou via `psql`), rode:
+Na VPS, com o compose no ar:
 
-```sql
-select * from public.create_bootstrap_invite('Jhonata Jackson', 'email-real@exemplo.com');
+```bash
+docker compose exec db psql -U postgres -d cuidar \
+  -c "select * from public.create_bootstrap_invite('Jhonata Jackson', 'email-real@exemplo.com');"
 ```
 
 A função devolve um `token`. Monte o link e abra no navegador:
@@ -218,6 +265,36 @@ bloqueada. Depois disso, os demais convites saem de dentro do sistema, em
 
 > `create_bootstrap_invite` só funciona enquanto nenhuma conta estiver vinculada,
 > e não é executável por usuários autenticados.
+
+---
+
+## Senhas
+
+O sistema **não envia e-mail**. Isso é uma decisão, não uma pendência: um GC de
+33 pessoas que se conhecem pessoalmente não precisa de um servidor de e-mail
+com reputação, SPF e caixa de spam para funcionar.
+
+O que isso significa na prática:
+
+- **Convite** — o líder gera o link em *Integrantes → Convidar para o sistema*
+  e envia por WhatsApp. O link vale 14 dias e uma única vez.
+- **Trocar a própria senha** — em *Perfil*, com a senha atual em mãos. Ao
+  salvar, as sessões abertas em outros aparelhos caem.
+- **Esqueci minha senha** — a tela de login abre um aviso pedindo para falar
+  com a liderança. Não há link automático.
+
+Para redefinir a senha de alguém, o administrador roda, na VPS:
+
+```bash
+docker compose exec db psql -U postgres -d cuidar -c \
+  "update auth.users
+      set encrypted_password = extensions.crypt('SenhaProvisoria1', extensions.gen_salt('bf', 10)),
+          updated_at = now()
+    where lower(email) = lower('pessoa@exemplo.com');"
+```
+
+Entregue a senha provisória pessoalmente e peça que a pessoa troque em
+*Perfil*. Nenhuma senha em claro fica gravada: o banco guarda só o hash bcrypt.
 
 ---
 
@@ -287,12 +364,16 @@ partir de `auth.uid()`:
 
 ## Testes
 
+Tudo o que precisa de banco espera o compose de desenvolvimento no ar
+(`npm run dev:servicos`) e o `.env` preenchido. Sem isso, essas suítes são
+**puladas**, nunca falham.
+
 ```bash
-npm test                   # unitários + componentes (integração é pulada sem Supabase)
+npm test                   # unitários + componentes
 npm run test:integration   # RLS e regras de negócio contra o banco
 npm run test:e2e           # fluxos críticos no navegador
 npm run verify:db          # migrations + seed + regras em um Postgres descartável
-npm run verify:generation  # geração semanal ponta a ponta pela Edge Function
+npm run verify:generation  # geração semanal ponta a ponta pela API
 npm run lint
 npm run typecheck
 npm run build
@@ -306,24 +387,18 @@ autoatribuição e duplicidade, a preferência por duplas inéditas, o fallback 
 a dupla mais antiga, restrições de pareamento e o comportamento quando um
 cuidador é desativado.
 
-**Regras no banco** (`supabase/tests/rules.sql`, via
-`./scripts/verify-migrations.sh`) exercitam as constraints e gatilhos sem
-precisar do Supabase completo.
+**Regras no banco** (`db/tests/rules.sql`, via `npm run verify:db`) exercitam as
+constraints e os gatilhos em um Postgres limpo, em segundos, sem subir a
+aplicação. A mesma rotina confere que `auth.uid()` continua lendo a sessão —
+inclusive quando o GUC volta vazio em uma conexão reaproveitada do pool.
 
-**Integração/RLS** (`tests/integration/rls.test.ts`) precisa do Supabase local:
-
-```bash
-npx supabase start
-npx supabase status          # copie a anon key e a service_role key
-SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... npm run test:integration
-```
-
-Verificam que irmão não lê feedback, que a transferência só muda o responsável
+**Integração/RLS** (`tests/integration/rls.test.ts`) roda contra o banco real e
+verifica que irmão não lê feedback, que a transferência só muda o responsável
 após o aceite, que publicação e reorganização exigem papel de líder, que
 nenhuma ponta do sistema aceita cuidado entre gêneros diferentes e que a
 solicitação reservada não vaza para o líder.
 
-**End-to-end** (`tests/e2e/`) precisa das mesmas variáveis e cobre login, Minha
+**End-to-end** (`tests/e2e/`) cobre login, Minha
 semana, discípulo marcando contato, líder marcando contato com o discípulo fixo
 e com o irmão do rodízio, transferência com aceite, criação de atividade,
 publicação da semana e pedido reservado de supervisão. Roda em desktop e em
@@ -335,17 +410,16 @@ projeto ocupando a porta padrão do Vite.
 o que transforma "revisão visual" em algo que não regride.
 
 **Verificação da geração** (`npm run verify:generation`) monta um GC com o mesmo
-formato do real (2 líderes, 6 discípulos, 23 irmãos), chama a Edge Function e
-confere no banco: 29 cuidados, nenhum entre gêneros diferentes, ninguém cuidado
-duas vezes, carga com diferença máxima de 1 em cada pool e os 6 discípulos com
-seus líderes. Precisa de `npx supabase functions serve generate-week` rodando.
+formato do real (2 líderes, 6 discípulos, 23 irmãos), pede a geração ao servidor
+com o token de um líder e confere no banco: 29 cuidados, nenhum entre gêneros
+diferentes, ninguém cuidado duas vezes, carga com diferença máxima de 1 em cada
+pool e os 6 discípulos com seus líderes.
+
+Na primeira vez, instale os navegadores do Playwright:
 
 ```bash
 npx playwright install --with-deps
-SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... npm run test:e2e
 ```
-
-Sem as variáveis, integração e e2e são **pulados**, nunca falham.
 
 ---
 
@@ -365,28 +439,62 @@ um aviso e bloqueia gravações em vez de enfileirar dados sensíveis em silênc
 
 ---
 
-## Deploy
+## Deploy na VPS
 
-**Frontend** — qualquer host estático com fallback para SPA (Vercel, Netlify,
-Cloudflare Pages):
-
-```bash
-npm run build   # gera dist/
-```
-
-Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no painel do host.
-
-**Banco e Edge Function:**
+Precisa de **Docker**, **git** e um domínio apontando para o IP da máquina.
 
 ```bash
-npx supabase link --project-ref <ref>
-npx supabase db push
-npm run functions:deploy
+# 1. na VPS, uma vez
+git clone git@github.com:jhonata-jackson-tech/nc-discipulos.git cuidar-gc
+cd cuidar-gc
+cp .env.example .env
+# preencha DOMAIN e gere cada segredo: openssl rand -hex 32
+
+# 2. subir
+npm run deploy       # ou: docker compose build && docker compose up -d
 ```
 
-No Supabase, em **Authentication → URL Configuration**, aponte o `Site URL` para
-o domínio da aplicação e inclua `https://seu-dominio/definir-senha` nas URLs de
-redirecionamento.
+O Caddy pede o certificado ao Let's Encrypt sozinho na primeira subida — o
+domínio já precisa estar resolvendo para o IP da VPS, e as portas 80 e 443
+livres.
+
+O `migrate` roda antes da API e do PostgREST subirem: migrations novas entram
+sozinhas no deploy, e o seed dos 33 integrantes só é aplicado se o banco estiver
+vazio.
+
+Depois do primeiro deploy, emita o convite de bootstrap (veja
+[Primeiro acesso da liderança](#primeiro-acesso-da-liderança)).
+
+### Atualizar
+
+```bash
+git pull && npm run deploy
+```
+
+### O que fica exposto
+
+Só as portas 80 e 443, do Caddy. `db`, `postgrest` e `api` existem apenas na
+rede interna do compose — o Postgres não escuta em porta pública nem com senha.
+
+### Backup
+
+O banco vive no volume `cuidar-gc_db-data`. Um dump diário fora da máquina é o
+mínimo aceitável para dados de cuidado pastoral:
+
+```bash
+docker compose exec -T db pg_dump -U postgres -d cuidar --format=custom \
+  > backup-$(date +%F).dump
+```
+
+Restauração:
+
+```bash
+docker compose exec -T db pg_restore -U postgres -d cuidar --clean --if-exists \
+  < backup-2026-08-28.dump
+```
+
+Guarde os dumps **fora da VPS** (outro servidor, um bucket, seu computador) e
+confira uma restauração de verdade antes de precisar dela.
 
 ---
 
@@ -402,17 +510,22 @@ src/
     ui/           primitivos (botão, campo, diálogo, tabela…)
     common/       peças compartilhadas (estados, badges, pessoa, indicadores)
     layout/       shell, guardas de rota e avisos globais
-  lib/            datas, rótulos em pt-BR, erros e cliente Supabase
+  lib/            datas, rótulos em pt-BR, erros, sessão e cliente de dados
   types/          tipos do banco
-supabase/
+server/           serviço de sessão e geração da semana (Express + pg)
+db/
   migrations/     schema, RLS e funções de servidor
-  functions/      Edge Function `generate-week`
   tests/          asserções SQL das regras de negócio
   seed.sql        os 33 integrantes, sem dados inventados
+  roles.sql       papéis de conexão (senhas vêm do ambiente)
 tests/
   integration/    RLS e regras contra o banco real
   e2e/            fluxos críticos no navegador
-scripts/          ícones da PWA e verificação das migrations
+scripts/
+  lib/local.mjs   sessão e cliente de dados para scripts e testes
+  migrate.sh      aplica migrations e seed no container `migrate`
+  deploy.sh       publica na VPS
+docker-compose.yml  · Caddyfile · web.Dockerfile · server/Dockerfile
 ```
 
 ---
@@ -431,9 +544,25 @@ e restrições filtram por `group_memberships`. O produto opera um único GC hoj
 mas "o primeiro grupo que existir" é uma suposição que quebra em silêncio — e
 quebrou, nos testes, assim que existiu mais de um grupo no banco.
 
-**Cadastro só por convite, sem service_role no frontend.** Um gatilho em
+**Cadastro só por convite, e a regra mora no banco.** Um gatilho em
 `auth.users` recusa qualquer conta criada sem um token de convite válido para
-aquele e-mail. O banco guarda só o hash do token.
+aquele e-mail. O banco guarda só o hash do token. Como a regra é do banco e não
+do serviço de sessão, ela sobreviveu inteira à troca de toda a camada de
+autenticação — inclusive os testes que a provam.
+
+**A identidade continua sendo `auth.uid()`.** Ao sair do Supabase, a alternativa
+óbvia era o servidor decidir quem vê o quê. Seria trocar dezenas de políticas de
+RLS por dezenas de `if` espalhados — e um `if` esquecido vaza feedback de
+cuidado. Em vez disso, o PostgREST publica as claims do JWT em
+`request.jwt.claims` e `auth.uid()` lê o `sub` dali. Uma função de quatro linhas
+manteve todo o resto de pé.
+
+**Uma armadilha que os testes pegaram:** um GUC personalizado que já foi definido
+alguma vez na sessão volta para a **string vazia** — não para NULL — quando a
+transação termina. `''::jsonb` derruba a consulta seguinte naquela conexão do
+pool, e o erro aparece longe dali, dentro de um gatilho de convite. Por isso
+`auth.claims()` normaliza antes de converter, e `verify:db` verifica esse caso
+específico.
 
 **A transferência não é um botão que move o cuidado.** Até o aceite, a
 responsabilidade — e a cobrança na tela de quem pediu — continua com o cuidador
@@ -456,7 +585,9 @@ de tela ouve "Senha", não "Senha asterisco".
 
 - **Notificações push** — o schema, a central interna e o service worker já
   existem; falta registrar as chaves VAPID e assinar os dispositivos.
-- **Tipos gerados** — `src/types/database.ts` foi escrito à mão para o projeto
-  nascer tipado sem depender de um banco ativo. Depois do primeiro
-  `supabase db push`, vale rodar `npm run gen:types` e migrar para o arquivo
-  gerado.
+- **Monitoramento** — hoje um erro inesperado morre no `console.error` do
+  `ErrorBoundary`. Vale plugar um coletor de erros antes de abrir para o grupo.
+- **Backup automático** — o comando existe e está documentado; falta agendar e
+  mandar os dumps para fora da VPS.
+- **Integração contínua** — `lint`, `typecheck`, `test` e `verify:db` ainda
+  dependem de alguém lembrar de rodar.

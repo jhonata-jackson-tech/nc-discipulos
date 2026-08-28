@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
 import type {
   Profile,
@@ -26,7 +26,7 @@ export function useSupervisionRequests() {
     queryKey: ['supervision-requests', group?.id],
     enabled: Boolean(group?.id),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('supervision_requests')
         .select(
           `*, requester:profiles!supervision_requests_requester_id_fkey(*),
@@ -53,7 +53,7 @@ export function useCreateSupervisionRequest() {
       suggestedTimes?: string
       confidential: boolean
     }) => {
-      const { error } = await supabase.from('supervision_requests').insert({
+      const { error } = await db.from('supervision_requests').insert({
         group_id: input.groupId,
         requester_id: input.requesterId,
         supervisor_id: input.supervisorId,
@@ -80,7 +80,7 @@ export function useUpdateSupervisionRequest() {
       status: SupervisionStatus
       scheduledFor?: string | null
     }) => {
-      const { error } = await supabase.rpc('update_supervision_request', {
+      const { error } = await db.rpc('update_supervision_request', {
         p_id: input.id,
         p_status: input.status,
         p_scheduled_for: input.scheduledFor ?? null,
@@ -99,7 +99,7 @@ export function useSupervisionNotes(requestId: string | undefined) {
     queryKey: ['supervision-notes', requestId],
     enabled: Boolean(requestId),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('supervision_notes')
         .select('*')
         .eq('request_id', requestId!)
@@ -114,7 +114,7 @@ export function useAddSupervisionNote() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { requestId: string; supervisorId: string; note: string }) => {
-      const { error } = await supabase.from('supervision_notes').insert({
+      const { error } = await db.from('supervision_notes').insert({
         request_id: input.requestId,
         supervisor_id: input.supervisorId,
         note: input.note,

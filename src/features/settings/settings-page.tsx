@@ -9,7 +9,7 @@ import {
   useSavePairingRestriction,
 } from '@/features/members/use-members'
 import { useAuditLogs } from '@/features/distribution/use-distribution'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { formatDateTime } from '@/lib/date'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,13 @@ import { Input } from '@/components/ui/input'
 import { Field } from '@/components/ui/field'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export function SettingsPage() {
@@ -79,7 +85,7 @@ function GroupForm({
 
   const save = async () => {
     setSaving(true)
-    const { error } = await supabase
+    const { error } = await db
       .from('groups')
       .update({ name: values.name, description: values.description })
       .eq('id', groupId)

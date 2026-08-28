@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
 import type { Activity, ActivityStatus, ActivityType, Profile } from '@/types/database'
 
@@ -17,7 +17,7 @@ export function useActivities(weekId?: string | null) {
     queryKey: ['activities', group?.id, weekId ?? 'all'],
     enabled: Boolean(group?.id),
     queryFn: async () => {
-      let query = supabase.from('activities').select(ACTIVITY_SELECT).eq('group_id', group!.id)
+      let query = db.from('activities').select(ACTIVITY_SELECT).eq('group_id', group!.id)
       if (weekId) query = query.eq('week_id', weekId)
       const { data, error } = await query
         .order('due_at', { ascending: true, nullsFirst: false })
@@ -46,7 +46,7 @@ export function useSaveActivity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: SaveActivityInput) => {
-      const { error } = await supabase.rpc('save_activity', {
+      const { error } = await db.rpc('save_activity', {
         p_id: input.id ?? null,
         p_group_id: input.groupId,
         p_week_id: input.weekId ?? null,
@@ -72,7 +72,7 @@ export function useSetActivityStatus() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ActivityStatus }) => {
-      const { error } = await supabase.rpc('set_activity_status', { p_id: id, p_status: status })
+      const { error } = await db.rpc('set_activity_status', { p_id: id, p_status: status })
       if (error) throw error
     },
     onSuccess: () => {
@@ -85,7 +85,7 @@ export function useDeleteActivity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('activities').delete().eq('id', id)
+      const { error } = await db.from('activities').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -99,7 +99,7 @@ export function useCopyRecurringActivities() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ groupId, weekId }: { groupId: string; weekId: string }) => {
-      const { data, error } = await supabase.rpc('copy_recurring_activities', {
+      const { data, error } = await db.rpc('copy_recurring_activities', {
         p_group_id: groupId,
         p_week_id: weekId,
       })

@@ -9,7 +9,7 @@ import {
   useDiscipleshipLinks,
   useSetDiscipleLeader,
 } from '@/features/members/use-members'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { friendlyError } from '@/lib/errors'
 import { careGenderLabel, roleLabel } from '@/lib/labels'
 import { cn, initials } from '@/lib/utils'
@@ -21,7 +21,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 /**
  * Assistente de primeiro acesso da lideranca.
@@ -45,7 +51,10 @@ export function SetupWizardPage() {
   const [finishing, setFinishing] = React.useState(false)
 
   const participants = React.useMemo(
-    () => (members.data ?? []).filter((member) => ['leader', 'disciple', 'member'].includes(member.role)),
+    () =>
+      (members.data ?? []).filter((member) =>
+        ['leader', 'disciple', 'member'].includes(member.role),
+      ),
     [members.data],
   )
 
@@ -77,7 +86,7 @@ export function SetupWizardPage() {
   const finish = async () => {
     if (!group) return
     setFinishing(true)
-    const { error } = await supabase.rpc('complete_group_setup', { p_group_id: group.id })
+    const { error } = await db.rpc('complete_group_setup', { p_group_id: group.id })
     setFinishing(false)
 
     if (error) {
@@ -160,7 +169,11 @@ export function SetupWizardPage() {
             </ul>
 
             <div className="flex justify-end">
-              <Button onClick={saveGenders} disabled={!allConfirmed} loading={confirmGenders.isPending}>
+              <Button
+                onClick={saveGenders}
+                disabled={!allConfirmed}
+                loading={confirmGenders.isPending}
+              >
                 Continuar
                 <ArrowRight aria-hidden />
               </Button>
@@ -197,7 +210,9 @@ export function SetupWizardPage() {
                 {disciples.map((disciple) => (
                   <li key={disciple.id} className="flex flex-wrap items-center gap-3 py-3">
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{disciple.full_name}</span>
+                      <span className="block truncate text-sm font-medium">
+                        {disciple.full_name}
+                      </span>
                       <span className="text-muted-foreground block text-xs">
                         {disciple.care_gender ? careGenderLabel[disciple.care_gender] : ''}
                       </span>
@@ -234,7 +249,8 @@ export function SetupWizardPage() {
               <Alert variant="warning">
                 <AlertTitle>Alguns discípulos ainda estão sem líder</AlertTitle>
                 <AlertDescription>
-                  Você pode concluir assim mesmo — eles entram no rodízio comum até serem vinculados.
+                  Você pode concluir assim mesmo — eles entram no rodízio comum até serem
+                  vinculados.
                 </AlertDescription>
               </Alert>
             )}
@@ -279,7 +295,9 @@ function StepBadge({
       >
         {done ? <CheckCircle2 className="size-4" aria-hidden /> : number}
       </span>
-      <span className={cn('text-sm', active ? 'font-medium' : 'text-muted-foreground')}>{label}</span>
+      <span className={cn('text-sm', active ? 'font-medium' : 'text-muted-foreground')}>
+        {label}
+      </span>
     </div>
   )
 }

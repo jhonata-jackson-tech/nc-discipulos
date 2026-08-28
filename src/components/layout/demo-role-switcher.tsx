@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { FlaskConical, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { signIn, signOut } from '@/lib/auth'
 import { friendlyError } from '@/lib/errors'
 import { useSession } from '@/features/auth/session-context'
 import { cn } from '@/lib/utils'
@@ -53,12 +53,8 @@ export function DemoRoleSwitcher({ compact = false }: { compact?: boolean }) {
   const trocar = async (account: DemoAccount) => {
     setSwitching(account.email)
     try {
-      await supabase.auth.signOut()
-      const { error } = await supabase.auth.signInWithPassword({
-        email: account.email,
-        password: account.senha,
-      })
-      if (error) throw error
+      await signOut()
+      await signIn(account.email, account.senha)
 
       // Recarrega para começar limpo: cache de dados, rota e permissões.
       window.location.assign('/')

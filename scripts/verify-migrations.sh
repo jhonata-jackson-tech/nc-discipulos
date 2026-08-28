@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Aplica as migrations e o seed em um Postgres descartavel.
 #
-# Nao substitui o Supabase local (`supabase start`), mas valida rapidamente a
-# sintaxe SQL, as constraints e os gatilhos antes de qualquer deploy.
+# Nao sobe a aplicacao: valida a sintaxe SQL, as constraints, os gatilhos e as
+# regras de negocio em segundos, antes de qualquer deploy. Nao precisa de
+# nenhum segredo - `db/roles.sql` fica de fora justamente por isso.
 #
 #   ./scripts/verify-migrations.sh
 set -euo pipefail
@@ -19,36 +20,18 @@ docker run -d --name "$CONTAINER" -e POSTGRES_PASSWORD=postgres "$IMAGE" >/dev/n
 
 until docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1; do sleep 0.5; done
 
-# Stubs do que o Supabase fornece em producao: schema auth, roles e auth.uid().
-docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres <<'SQL' >/dev/null
-create schema if not exists auth;
-create schema if not exists extensions;
-create table auth.users (
-  id uuid primary key default gen_random_uuid(),
-  email text,
-  raw_user_meta_data jsonb default '{}'::jsonb
-);
-create or replace function auth.uid() returns uuid
-  language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-do $$ begin
-  create role anon nologin;
-  create role authenticated nologin;
-  create role service_role nologin;
-exception when duplicate_object then null; end $$;
-SQL
-
-for file in supabase/migrations/*.sql; do
+for file in db/migrations/*.sql; do
   echo "→ $(basename "$file")"
   docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < "$file"
 done
 
 echo "→ seed.sql"
-docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < supabase/seed.sql
+docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < db/seed.sql
 echo "→ seed.sql (segunda vez, conferindo idempotencia)"
-docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < supabase/seed.sql
+docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < db/seed.sql
 
-echo "→ regras de negocio (supabase/tests/rules.sql)"
-docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < supabase/tests/rules.sql
+echo "→ regras de negocio (db/tests/rules.sql)"
+docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -q -U postgres < db/tests/rules.sql
 
 echo "→ conferencias"
 docker exec -i "$CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -f - <<'SQL'
@@ -57,6 +40,7 @@ do $$
 declare
   total int;
   rls_missing text;
+  identidade uuid;
 begin
   select count(*) into total from public.profiles;
   if total <> 33 then
@@ -73,6 +57,23 @@ begin
      );
   if rls_missing is not null then
     raise exception 'tabelas sem Row Level Security: %', rls_missing;
+  end if;
+
+  -- A identidade da sessao e a peca que o PostgREST alimenta em producao:
+  -- se `auth.uid()` deixar de ler as claims, a RLS inteira cai junto.
+  perform set_config('request.jwt.claims',
+                     '{"sub":"11111111-1111-1111-1111-111111111111"}', true);
+  select auth.uid() into identidade;
+  if identidade is distinct from '11111111-1111-1111-1111-111111111111'::uuid then
+    raise exception 'auth.uid() nao esta lendo request.jwt.claims';
+  end if;
+
+  -- Conexao reaproveitada do pool: o GUC volta para string vazia, e nao para
+  -- NULL. Se `auth.uid()` nao aguentar isso, o erro reaparece dentro de um
+  -- gatilho, longe de qualquer pista.
+  perform set_config('request.jwt.claims', '', true);
+  if auth.uid() is not null then
+    raise exception 'auth.uid() deveria ser nulo sem sessao';
   end if;
 
   raise notice 'seed: % integrantes, RLS ativa em todas as tabelas', total;

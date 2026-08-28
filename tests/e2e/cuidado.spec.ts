@@ -18,6 +18,15 @@ test.describe('entrada e minha semana', () => {
     await expect(page.getByText('E-mail ou senha incorretos.')).toBeVisible()
   })
 
+  test('quem esqueceu a senha é mandado para a liderança, não para um e-mail', async ({ page }) => {
+    await page.goto('/entrar')
+    await page.getByRole('button', { name: 'Esqueci minha senha' }).click()
+
+    const aviso = page.getByRole('dialog')
+    await expect(aviso.getByText('Fale com o administrador do sistema.')).toBeVisible()
+    await expect(aviso.getByRole('button', { name: 'Entendi' })).toBeVisible()
+  })
+
   test('o discípulo vê o que precisa fazer na semana', async ({ page }) => {
     await signIn(page, 'disciple')
 

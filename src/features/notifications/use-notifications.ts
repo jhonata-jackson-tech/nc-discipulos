@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import type { AppNotification } from '@/types/database'
 
 export function useNotifications() {
@@ -8,7 +8,7 @@ export function useNotifications() {
     staleTime: 20_000,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
@@ -29,7 +29,7 @@ export function useMarkNotificationsRead() {
   return useMutation({
     mutationFn: async (ids: string[]) => {
       if (ids.length === 0) return
-      const { error } = await supabase
+      const { error } = await db
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
         .in('id', ids)

@@ -3,19 +3,17 @@
  * convite. Atalho de desenvolvimento: em producao o convite sai de dentro do
  * sistema, em Integrantes > Convidar para o sistema.
  *
- *   SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... \
- *     node scripts/criar-acesso.mjs "Jhonata Jackson" jhonata@cuidar.local CuidarGC2026
+ *   node scripts/criar-acesso.mjs "Jhonata Jackson" jhonata@cuidar.local CuidarGC2026
  */
-import { createHash, randomUUID } from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
+import { adminClient, configurado, darAcesso, encerrar, entrar } from './lib/local.mjs'
 
-const URL = 'http://127.0.0.1:54321'
-const ANON = process.env.SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!configurado) {
+  console.error('Defina DATABASE_URL e JWT_SECRET no .env (veja .env.example).')
+  process.exit(1)
+}
+
 const [nome, email, senha] = process.argv.slice(2)
-
-const sha256 = (v) => createHash('sha256').update(v).digest('hex')
-const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
+const admin = adminClient()
 
 const { data: profile, error } = await admin
   .from('profiles')
@@ -30,20 +28,10 @@ if (profile.user_id) {
   process.exit(0)
 }
 
-const token = randomUUID().replace(/-/g, '')
-await admin.from('invites').insert({ profile_id: profile.id, email, token_hash: sha256(token) })
-
-const anon = createClient(URL, ANON, { auth: { persistSession: false } })
-const { error: signUpError } = await anon.auth.signUp({
-  email,
-  password: senha,
-  options: { data: { invite_token: token } },
-})
-if (signUpError) throw signUpError
+await darAcesso(admin, profile.id, email, senha)
 
 // Confere que o login realmente funciona antes de anunciar.
-const check = createClient(URL, ANON, { auth: { persistSession: false } })
-const { error: loginError } = await check.auth.signInWithPassword({ email, password: senha })
-if (loginError) throw loginError
+await entrar(email, senha)
+await encerrar()
 
 console.log(`✓ ${profile.full_name} (${profile.role}) — login testado com sucesso`)

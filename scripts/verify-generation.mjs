@@ -2,27 +2,28 @@
  * Verificacao ponta a ponta da geracao semanal.
  *
  * Cria um GC de teste com o mesmo formato do GC real (2 lideres, 6 discipulos,
- * 23 irmaos), chama a Edge Function `generate-week` com o token de um lider e
- * confere o resultado gravado no banco.
+ * 23 irmaos), pede a geracao ao servidor com o token de um lider e confere o
+ * resultado gravado no banco.
  *
- *   npx supabase start
- *   npx supabase functions serve generate-week
- *   SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/verify-generation.mjs
+ *   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+ *   node scripts/verify-generation.mjs
  */
-import { createHash, randomUUID } from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
+import {
+  adminClient,
+  configurado,
+  darAcesso,
+  encerrar,
+  gerarSemana,
+  removerConta,
+} from './lib/local.mjs'
 
-const URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
-const ANON = process.env.SUPABASE_ANON_KEY
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!ANON || !SERVICE) {
-  console.error('Defina SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY (veja `npx supabase status`).')
+if (!configurado) {
+  console.error('Defina DATABASE_URL e JWT_SECRET no .env (veja .env.example).')
   process.exit(1)
 }
 
-const sha256 = (value) => createHash('sha256').update(value).digest('hex')
-const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
+const admin = adminClient()
 const tag = randomUUID().slice(0, 6)
 
 function fail(message) {
@@ -70,32 +71,13 @@ for (const disciple of disciplesF) {
 // Conta de lider criada pelo fluxo real de convite.
 const email = `lider.${tag}@verificacao.local`
 const password = `Verificacao-${tag}-1`
-const token = randomUUID().replace(/-/g, '')
-await admin.from('invites').insert({ profile_id: leaderM.id, email, token_hash: sha256(token) })
+const { sessao } = await darAcesso(admin, leaderM.id, email, password)
 
-const anon = createClient(URL, ANON, { auth: { persistSession: false } })
-const { error: signUpError } = await anon.auth.signUp({
-  email,
-  password,
-  options: { data: { invite_token: token } },
-})
-if (signUpError) throw signUpError
-
-const { data: auth } = await anon.auth.signInWithPassword({ email, password })
-
-const response = await fetch(`${URL}/functions/v1/generate-week`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${auth.session.access_token}`,
-    apikey: ANON,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ groupId: group.id, startsOn: '2026-09-07' }),
-})
-
-const body = await response.json()
-if (!response.ok) {
-  fail(`a Edge Function respondeu ${response.status}: ${JSON.stringify(body)}`)
+let body
+try {
+  body = await gerarSemana(sessao.access_token, { groupId: group.id, startsOn: '2026-09-07' })
+} catch (falha) {
+  fail(`o servidor recusou a geracao: ${falha.message}`)
   process.exit(1)
 }
 
@@ -151,8 +133,9 @@ const { data: users } = await admin.from('profiles').select('user_id').in('id', 
 await admin.from('profiles').delete().in('id', ids)
 await admin.from('groups').delete().eq('id', group.id)
 for (const user of users ?? []) {
-  if (user.user_id) await admin.auth.admin.deleteUser(user.user_id)
+  if (user.user_id) await removerConta(user.user_id)
 }
+await encerrar()
 
 if (process.exitCode) {
   console.error('\n✗ a geracao nao respeitou as regras.')

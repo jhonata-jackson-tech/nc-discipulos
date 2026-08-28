@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
 import { byName } from '@/lib/utils'
 import type {
@@ -22,7 +22,7 @@ export function useMembers() {
     enabled: Boolean(group?.id),
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('profiles')
         .select('*, group_memberships!inner(group_id)')
         .eq('group_memberships.group_id', group!.id)
@@ -47,10 +47,7 @@ export function useDiscipleshipLinks() {
     queryKey: ['discipleship-links'],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('discipleship_links')
-        .select('*')
-        .is('ended_on', null)
+      const { data, error } = await db.from('discipleship_links').select('*').is('ended_on', null)
       if (error) throw error
       return data as DiscipleshipLink[]
     },
@@ -70,7 +67,7 @@ export function useCreateMember() {
       role: Profile['role']
       care_gender?: CareGender | null
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('profiles')
         .insert({
           full_name: input.full_name.trim(),
@@ -88,7 +85,7 @@ export function useCreateMember() {
       // O integrante nasce ja vinculado ao GC: e a associacao que define qual
       // grupo ele enxerga ao entrar.
       if (group) {
-        const membership = await supabase
+        const membership = await db
           .from('group_memberships')
           .insert({ group_id: group.id, profile_id: data.id, role: input.role })
         if (membership.error) throw membership.error
@@ -107,7 +104,7 @@ export function useUpdateMember() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<Profile> & { id: string }) => {
-      const { error } = await supabase.from('profiles').update(patch).eq('id', id)
+      const { error } = await db.from('profiles').update(patch).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -130,7 +127,7 @@ export function useSetMemberStatus() {
       status: MemberStatus
       reason?: string
     }) => {
-      const { error } = await supabase.rpc('set_member_status', {
+      const { error } = await db.rpc('set_member_status', {
         p_profile_id: profileId,
         p_status: status,
         p_reason: reason ?? null,
@@ -152,8 +149,14 @@ export function useSetMemberStatus() {
 export function useSetDiscipleLeader() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ discipleId, leaderId }: { discipleId: string; leaderId: string | null }) => {
-      const { error } = await supabase.rpc('set_disciple_leader', {
+    mutationFn: async ({
+      discipleId,
+      leaderId,
+    }: {
+      discipleId: string
+      leaderId: string | null
+    }) => {
+      const { error } = await db.rpc('set_disciple_leader', {
         p_disciple_id: discipleId,
         p_leader_id: leaderId,
       })
@@ -170,7 +173,7 @@ export function useConfirmCareGenders() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (entries: { id: string; careGender: CareGender }[]) => {
-      const { error } = await supabase.rpc('confirm_care_genders', { p_entries: entries })
+      const { error } = await db.rpc('confirm_care_genders', { p_entries: entries })
       if (error) throw error
     },
     onSuccess: () => {
@@ -184,7 +187,7 @@ export function useCreateInvite() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ profileId, email }: { profileId: string; email: string }) => {
-      const { data, error } = await supabase.rpc('create_invite', {
+      const { data, error } = await db.rpc('create_invite', {
         p_profile_id: profileId,
         p_email: email,
       })
@@ -206,7 +209,7 @@ export function usePairingRestrictions() {
     queryKey: ['pairing-restrictions', group?.id],
     enabled: Boolean(group?.id),
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('pairing_restrictions')
         .select('*')
         .eq('group_id', group!.id)
@@ -220,7 +223,7 @@ export function useSavePairingRestriction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { groupId: string; a: string; b: string; reason: string }) => {
-      const { error } = await supabase.from('pairing_restrictions').insert({
+      const { error } = await db.from('pairing_restrictions').insert({
         group_id: input.groupId,
         profile_a: input.a,
         profile_b: input.b,
@@ -239,7 +242,7 @@ export function useRemovePairingRestriction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('pairing_restrictions').delete().eq('id', id)
+      const { error } = await db.from('pairing_restrictions').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {

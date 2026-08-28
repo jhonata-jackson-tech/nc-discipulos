@@ -14,7 +14,11 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: 'http://localhost:5173/' } },
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}', 'tests/unit/**/*.test.{ts,tsx}', 'tests/integration/**/*.test.ts'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'tests/unit/**/*.test.{ts,tsx}',
+      'tests/integration/**/*.test.ts',
+    ],
     testTimeout: 20_000,
     css: false,
   },

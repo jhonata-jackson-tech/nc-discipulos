@@ -5,21 +5,11 @@ import { router } from '@/app/routes'
 import { SessionProvider } from '@/features/auth/session-context'
 import { ThemeProvider } from '@/features/settings/theme-context'
 import { ErrorBoundary } from '@/components/layout/error-boundary'
-import { MissingConfig } from '@/components/layout/missing-config'
 import { OfflineBanner } from '@/components/layout/offline-banner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/toaster'
-import { isSupabaseConfigured } from '@/lib/supabase'
 
 export default function App() {
-  if (!isSupabaseConfigured) {
-    return (
-      <ThemeProvider>
-        <MissingConfig />
-      </ThemeProvider>
-    )
-  }
-
   return (
     <ErrorBoundary>
       <ThemeProvider>

@@ -1,0 +1,52 @@
+# =============================================================================
+# Cuidar GC :: entrada unica
+#
+# O Caddy emite e renova o certificado sozinho (Let's Encrypt) assim que o
+# dominio de DOMAIN apontar para o IP desta maquina.
+#
+# Tudo mora na mesma origem - e por isso que nao existe CORS, nem URL de API
+# embutida no bundle, nem chave publica para vazar.
+# =============================================================================
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# HTTPS obrigatorio, inclusive nas proximas visitas.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		# O produto e privado: buscador nenhum tem o que indexar aqui.
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+
+	# Dados: o PostgREST valida o JWT e a RLS decide o que cada pessoa ve.
+	handle_path /rest/v1/* {
+		reverse_proxy postgrest:3000
+	}
+
+	# Sessao e geracao da semana.
+	handle /auth/* {
+		reverse_proxy api:3001
+	}
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+
+	# A PWA. O `try_files` e o fallback de SPA: recarregar /minha-semana
+	# precisa devolver o index, nao um 404.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+
+		# O HTML e o service worker nunca podem ficar presos em cache: e o que
+		# garante que uma versao nova chegue no celular de todo mundo.
+		@sempre-fresco path /index.html / /sw.js /manifest.webmanifest
+		header @sempre-fresco Cache-Control "no-cache"
+
+		@imutavel path /assets/*
+		header @imutavel Cache-Control "public, max-age=31536000, immutable"
+	}
+}

@@ -8,9 +8,9 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${E2E_PORT}`
 /**
  * Fluxos criticos ponta a ponta.
  *
- * Precisa de um Supabase acessivel (local ou de teste) e das variaveis
- * SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY. Sem elas, a preparacao marca
- * os testes como pulados em vez de falhar.
+ * Precisa do compose de desenvolvimento no ar e das variaveis DATABASE_URL e
+ * JWT_SECRET no `.env`. Sem elas, a preparacao marca os testes como pulados
+ * em vez de falhar.
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -29,7 +29,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } } },
+    {
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } },
+    },
     { name: 'celular', use: { ...devices['Pixel 7'] } },
   ],
   webServer: process.env.E2E_BASE_URL

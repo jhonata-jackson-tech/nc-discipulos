@@ -1,16 +1,24 @@
 import * as React from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { signIn } from '@/lib/auth'
 import { friendlyError } from '@/lib/errors'
 import { AuthLayout } from './auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/ui/field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 const schema = z.object({
   email: z.email('Informe um e-mail válido.'),
@@ -23,6 +31,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [serverError, setServerError] = React.useState<string | null>(null)
   const [showPassword, setShowPassword] = React.useState(false)
+  const [helpOpen, setHelpOpen] = React.useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -31,11 +40,9 @@ export function LoginPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null)
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email.trim().toLowerCase(),
-      password: values.password,
-    })
-    if (error) {
+    try {
+      await signIn(values.email.trim().toLowerCase(), values.password)
+    } catch (error) {
       setServerError(friendlyError(error))
       return
     }
@@ -102,11 +109,52 @@ export function LoginPage() {
         </Button>
 
         <div className="text-center">
-          <Link to="/recuperar-senha" className="text-primary text-sm hover:underline">
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="text-primary text-sm hover:underline"
+          >
             Esqueci minha senha
-          </Link>
+          </button>
         </div>
       </form>
+
+      <ForgotPasswordDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </AuthLayout>
+  )
+}
+
+/**
+ * Nao existe recuperacao automatica de senha: o sistema nao envia e-mail. A
+ * troca passa pela lideranca, que ja conhece cada integrante pessoalmente -
+ * e essa conversa vale mais do que um link automatico.
+ */
+function ForgotPasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Recuperar senha</DialogTitle>
+          <DialogDescription>A redefinição é feita pela liderança do GC.</DialogDescription>
+        </DialogHeader>
+
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          Fale com o administrador do sistema. Ele cadastra uma senha nova para você e a entrega
+          pessoalmente; depois de entrar, você mesmo troca em <strong>Perfil</strong>.
+        </p>
+
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+            Entendi
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

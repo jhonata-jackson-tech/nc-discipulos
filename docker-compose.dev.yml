@@ -1,0 +1,31 @@
+# =============================================================================
+# Sobreposicao para desenvolvimento na sua maquina.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db migrate postgrest api
+#   npm run dev
+#
+# O `web` (Caddy) fica de fora: em desenvolvimento quem serve a aplicacao e o
+# Vite, que faz o mesmo roteamento pelo proxy configurado em vite.config.ts.
+# As portas abaixo existem so aqui - em producao nada disso e publicado.
+# =============================================================================
+services:
+  migrate:
+    environment:
+      # Libera o papel que ignora RLS para os scripts de demonstracao e os
+      # testes de integracao. Nunca em producao.
+      ENABLE_SERVICE_ROLE_API: 'true'
+
+  db:
+    ports:
+      - '127.0.0.1:5432:5432'
+
+  postgrest:
+    ports:
+      - '127.0.0.1:3002:3000'
+
+  api:
+    ports:
+      - '127.0.0.1:3001:3001'
+    environment:
+      # O Vite roda em outra origem durante o desenvolvimento.
+      CORS_ORIGIN: http://localhost:5173

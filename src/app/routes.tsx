@@ -7,21 +7,19 @@ import { LoginPage } from '@/features/auth/login-page'
 
 // Cada tela vira um pedaco separado: no celular, o primeiro carregamento traz
 // so o essencial da rota aberta.
-const ForgotPasswordPage = lazy(() =>
-  import('@/features/auth/forgot-password-page').then((m) => ({ default: m.ForgotPasswordPage })),
-)
-const ResetPasswordPage = lazy(() =>
-  import('@/features/auth/reset-password-page').then((m) => ({ default: m.ResetPasswordPage })),
-)
 const AcceptInvitePage = lazy(() =>
   import('@/features/auth/accept-invite-page').then((m) => ({ default: m.AcceptInvitePage })),
 )
 const MyWeekPage = lazy(() =>
   import('@/features/week/my-week-page').then((m) => ({ default: m.MyWeekPage })),
 )
-const CarePage = lazy(() => import('@/features/care/care-page').then((m) => ({ default: m.CarePage })))
+const CarePage = lazy(() =>
+  import('@/features/care/care-page').then((m) => ({ default: m.CarePage })),
+)
 const DistributionPage = lazy(() =>
-  import('@/features/distribution/distribution-page').then((m) => ({ default: m.DistributionPage })),
+  import('@/features/distribution/distribution-page').then((m) => ({
+    default: m.DistributionPage,
+  })),
 )
 const WeeksPage = lazy(() =>
   import('@/features/distribution/weeks-page').then((m) => ({ default: m.WeeksPage })),
@@ -68,22 +66,6 @@ function LazyAuthPage({ children }: { children: React.ReactNode }) {
 
 export const router = createBrowserRouter([
   { path: '/entrar', element: <LoginPage /> },
-  {
-    path: '/recuperar-senha',
-    element: (
-      <LazyAuthPage>
-        <ForgotPasswordPage />
-      </LazyAuthPage>
-    ),
-  },
-  {
-    path: '/definir-senha',
-    element: (
-      <LazyAuthPage>
-        <ResetPasswordPage />
-      </LazyAuthPage>
-    ),
-  },
   {
     path: '/convite',
     element: (

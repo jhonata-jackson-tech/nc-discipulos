@@ -1,0 +1,15 @@
+# Lista de integrantes para `npm run cadastrar:lote`.
+#
+# Separador: ponto e virgula. Uma pessoa por linha.
+#
+#   atual        nome como esta hoje no sistema (o seed usa o nome curto).
+#                Preenchido, completa e renomeia em vez de duplicar.
+#   papel        leader, supervisor, disciple ou member.
+#
+# Genero de cuidado e discipulado NAO entram aqui: sao confirmados pela
+# lideranca, pessoa a pessoa, no assistente de primeiros passos.
+#
+# Copie para `cadastros.local.csv` (fora do Git) antes de por gente de verdade.
+atual;nome;email;whatsapp;nascimento;papel
+Nome Curto;Nome Completo da Pessoa;pessoa@exemplo.com;21999999999;22/01/1997;disciple
+;Alguém Que Ainda Não Existe;outra@exemplo.com;(21) 98888-7777;1995-06-13;member

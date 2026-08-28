@@ -11,3 +11,5 @@ test-results
 *.log
 tests/e2e/.state.json
 server/node_modules
+cadastros.local.csv
+cadastros.*.local.csv

@@ -8,15 +8,18 @@
  *   node scripts/cadastrar.mjs \
  *     --nome "Fulano de Tal" --email fulano@exemplo.com \
  *     --whatsapp 21999999999 --nascimento 1996-03-21 \
- *     --papel disciple --genero male \
+ *     --papel disciple \
  *     --lider "Nome do Lider" \
  *     --site https://discipulos.exemplo.com.br
  *
  * `--atual "Nome como esta no sistema"` renomeia em vez de duplicar - util
  * para completar alguem que ja veio no seed com o nome curto.
+ *
+ * Genero de cuidado nao entra aqui: e um ato deliberado da lideranca, pessoa a
+ * pessoa, no assistente de primeiros passos.
  */
-import { adminClient, configurado, encerrar, sha256 } from './lib/local.mjs'
-import { randomUUID } from 'node:crypto'
+import { adminClient, configurado, encerrar } from './lib/local.mjs'
+import { cadastrar, grupoPadrao } from './lib/cadastro.mjs'
 
 if (!configurado) {
   console.error('Defina DATABASE_URL e JWT_SECRET no .env (veja .env.example).')
@@ -41,91 +44,48 @@ const obrigatorio = (campo) => {
 const nome = obrigatorio('nome')
 const email = obrigatorio('email').trim().toLowerCase()
 const papel = args.papel ?? 'member'
-const genero = args.genero ?? null
 const site = (args.site ?? process.env.SITE_URL ?? 'http://localhost:5173').replace(/\/$/, '')
 
 if (!['leader', 'supervisor', 'disciple', 'member'].includes(papel)) {
   console.error(`Papel inválido: ${papel}. Use leader, supervisor, disciple ou member.`)
   process.exit(1)
 }
-if (genero && !['male', 'female'].includes(genero)) {
-  console.error(`Gênero de cuidado inválido: ${genero}. Use male ou female.`)
-  process.exit(1)
-}
-
-/** Aceita 21999999999, (21) 99999-9999 e 1996-03-21 ou 21/03/1996. */
-const telefone = args.whatsapp ? args.whatsapp.replace(/\D/g, '') : null
-const nascimento = args.nascimento?.includes('/')
-  ? args.nascimento.split('/').reverse().join('-')
-  : (args.nascimento ?? null)
-
 const admin = adminClient()
-const grupo = await (async () => {
-  const { data, error } = await admin.from('groups').select('id, name').order('created_at').limit(1)
-  if (error) throw new Error(error.message)
-  if (!data?.length) throw new Error('Nenhum GC no banco. Rode as migrations e o seed primeiro.')
-  return data[0]
-})()
+const grupo = await grupoPadrao(admin)
 
-// ----------------------------------------------------------------- cadastro
-const procurar = async (valor) => {
-  const { data, error } = await admin
-    .from('profiles')
-    .select('id, full_name, user_id')
-    .eq('full_name', valor)
-    .is('deleted_at', null)
-  if (error) throw new Error(error.message)
-  return data?.[0] ?? null
-}
-
-let pessoa = (await procurar(args.atual ?? nome)) ?? (args.atual ? await procurar(nome) : null)
-
-const dados = {
-  full_name: nome,
+const resultado = await cadastrar(admin, grupo, {
+  atual: args.atual,
+  nome,
   email,
-  phone: telefone,
-  birth_date: nascimento,
-  role: papel,
-  care_gender: genero,
-  salutation: genero ? (genero === 'male' ? 'irmao' : 'irma') : null,
-}
+  whatsapp: args.whatsapp,
+  nascimento: args.nascimento,
+  papel,
+  site,
+})
 
-if (pessoa) {
-  const { error } = await admin.from('profiles').update(dados).eq('id', pessoa.id)
-  if (error) throw new Error(error.message)
-  console.log(`→ ${nome}: cadastro atualizado`)
-} else {
-  const { data, error } = await admin.from('profiles').insert(dados).select('id, user_id').single()
-  if (error) throw new Error(error.message)
-  pessoa = data
-  console.log(`→ ${nome}: cadastro criado`)
-}
+console.log(`→ ${resultado.nome}: ${resultado.acao}`)
 
-// Vinculo com o GC: e dele que saem semana, atividades e integrantes.
-const { data: vinculo } = await admin
-  .from('group_memberships')
-  .select('id')
-  .eq('group_id', grupo.id)
-  .eq('profile_id', pessoa.id)
-  .is('left_at', null)
-
-if (!vinculo?.length) {
-  const { error } = await admin
-    .from('group_memberships')
-    .insert({ group_id: grupo.id, profile_id: pessoa.id, role: papel })
-  if (error) throw new Error(error.message)
-  console.log(`→ ${nome}: vinculado ao ${grupo.name}`)
-}
-
-// ----------------------------------------------------------------- discipulado
+// O discipulado e um ato da lideranca e tem lugar proprio no assistente, mas
+// quando o vinculo ja e conhecido daqui, poupa uma volta.
 if (args.lider) {
-  const lider = await procurar(args.lider)
+  const { data: lideres } = await admin
+    .from('profiles')
+    .select('id, full_name')
+    .eq('full_name', args.lider)
+    .is('deleted_at', null)
+  const lider = lideres?.[0]
   if (!lider) throw new Error(`Líder não encontrado: ${args.lider}`)
+
+  const { data: pessoas } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('full_name', nome)
+    .is('deleted_at', null)
 
   const { data: atual } = await admin
     .from('discipleship_links')
     .select('id, leader_id')
-    .eq('disciple_id', pessoa.id)
+    .eq('disciple_id', pessoas[0].id)
     .is('ended_on', null)
 
   if (atual?.[0]?.leader_id !== lider.id) {
@@ -135,29 +95,19 @@ if (args.lider) {
         .update({ ended_on: new Date().toISOString().slice(0, 10) })
         .eq('id', atual[0].id)
     }
-    // O banco recusa gêneros diferentes: a regra não depende deste script.
+    // O banco recusa gêneros diferentes e exige os dois confirmados.
     const { error } = await admin
       .from('discipleship_links')
-      .insert({ disciple_id: pessoa.id, leader_id: lider.id })
+      .insert({ disciple_id: pessoas[0].id, leader_id: lider.id })
     if (error) throw new Error(error.message)
     console.log(`→ ${nome}: discipulado de ${lider.full_name}`)
   }
 }
 
-// -------------------------------------------------------------------- convite
-if (pessoa.user_id) {
-  console.log(`\n✓ ${nome} já tem acesso ao sistema. Nada de convite a fazer.\n`)
+if (resultado.link) {
+  console.log(`\n✓ Link de acesso (vale 14 dias, uso único):\n  ${resultado.link}\n`)
 } else {
-  await admin.from('invites').delete().eq('profile_id', pessoa.id).eq('status', 'pending')
-
-  const token = randomUUID().replace(/-/g, '')
-  const { error } = await admin
-    .from('invites')
-    .insert({ profile_id: pessoa.id, email, token_hash: sha256(token) })
-  if (error) throw new Error(error.message)
-
-  const link = `${site}/convite?token=${token}&email=${encodeURIComponent(email)}`
-  console.log(`\n✓ ${nome}\n  Link de acesso (vale 14 dias, uso único):\n  ${link}\n`)
+  console.log(`\n✓ ${nome} já tem acesso ao sistema.\n`)
 }
 
 await encerrar()

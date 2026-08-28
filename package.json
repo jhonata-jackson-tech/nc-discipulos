@@ -22,6 +22,7 @@
     "demo:limpar": "node scripts/seed-demo-limpar.mjs",
     "vapid": "node scripts/gerar-vapid.mjs",
     "cadastrar": "node scripts/cadastrar.mjs",
+    "cadastrar:lote": "node scripts/cadastrar-lote.mjs",
     "deploy": "./scripts/deploy.sh"
   },
   "dependencies": {

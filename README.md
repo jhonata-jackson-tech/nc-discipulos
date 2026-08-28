@@ -269,6 +269,24 @@ liga o discipulado (o banco recusa gêneros diferentes) e devolve o link. Use
 `--atual "Nome como está no sistema"` para completar quem veio do seed com o
 nome curto, em vez de duplicar.
 
+Para vários de uma vez — o caso real de quando as respostas chegam pelo
+WhatsApp — há a versão em lote, que lê um CSV e devolve todos os links:
+
+```bash
+cp cadastros.exemplo.csv cadastros.local.csv   # o .local fica fora do Git
+npm run cadastrar:lote -- cadastros.local.csv https://discipulos.exemplo.com.br
+```
+
+O arquivo com gente de verdade **não vai para o repositório**: dados pessoais de
+integrantes não têm por que morar no Git, e é a mesma razão pela qual o
+`db/seed.sql` traz só os nomes.
+
+Se o e-mail já estiver em outro cadastro, o script diz **de quem é** e sugere a
+coluna `atual` — quase sempre é a mesma pessoa cadastrada duas vezes.
+
+Gênero de cuidado e discipulado não entram por aí: são confirmados pela
+liderança, pessoa a pessoa, no assistente de primeiros passos.
+
 A partir daí, o líder define a senha, entra e passa pelo assistente
 **Primeiros passos**:
 

@@ -29,10 +29,9 @@ select 'create role auth_service login noinherit'
 select format('alter role auth_service with login noinherit password %L', :'auth_service_password') \gexec
 
 grant authenticated to auth_service;
-grant usage on schema auth, extensions to auth_service;
+grant usage on schema auth to auth_service;
 grant select, insert, update on auth.users to auth_service;
 grant select, insert, update on auth.refresh_tokens to auth_service;
-grant execute on function extensions.crypt(text, text), extensions.gen_salt(text, integer) to auth_service;
 
 -- Entrega das notificacoes push. Sao duas funcoes estreitas de proposito: o
 -- servico nunca ganha leitura sobre `notifications` nem sobre a lista de

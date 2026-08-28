@@ -11,12 +11,10 @@
 -- esse JWT e o servico de autenticacao (server/), com o mesmo segredo.
 -- =============================================================================
 
--- ------------------------------------------------------------------ extensoes
--- As migrations chamam `extensions.digest` e `extensions.gen_random_bytes`
--- (hash do convite e geracao do token). No Supabase o pgcrypto morava nesse
--- schema; aqui reproduzimos o mesmo endereco.
-create schema if not exists extensions;
-create extension if not exists pgcrypto with schema extensions;
+-- Nenhuma extensao e exigida. Tudo o que o schema precisa - `gen_random_uuid`
+-- para as chaves e `sha256` para o hash do convite - o Postgres 13+ ja traz de
+-- fabrica. E o que permite rodar em qualquer instalacao, inclusive nas
+-- compiladas sem os modulos contrib.
 
 -- --------------------------------------------------------------------- papeis
 -- `authenticator` e o papel de conexao do PostgREST: entra sem privilegio
@@ -49,8 +47,8 @@ grant usage on schema auth to authenticated, service_role;
 create table if not exists auth.users (
   id uuid primary key default gen_random_uuid(),
   email text not null,
-  -- Hash bcrypt gerado por `extensions.crypt(senha, gen_salt('bf'))`. A senha
-  -- em claro nunca sai do request: o hash e feito no banco.
+  -- Hash scrypt, calculado pelo servico de autenticacao. A senha em claro
+  -- nunca e gravada nem trafega alem do request que a trouxe.
   encrypted_password text not null,
   -- O gatilho `app.handle_new_user` le `invite_token` daqui.
   raw_user_meta_data jsonb not null default '{}'::jsonb,

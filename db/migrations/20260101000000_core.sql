@@ -1,8 +1,6 @@
 -- =============================================================================
 -- Cuidar GC :: 0001 - fundacoes, enums, pessoas e vinculos
 -- =============================================================================
-create extension if not exists pgcrypto with schema extensions;
-
 -- Schema reservado a helpers internos. Nao e exposto pelo PostgREST, portanto
 -- nenhuma funcao daqui pode ser chamada diretamente pelo frontend.
 create schema if not exists app;

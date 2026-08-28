@@ -10,6 +10,7 @@ import {
   type IssuedSession,
 } from '../tokens.ts'
 import { asyncRoute, HttpError, rateLimiter, requireSession, type AuthedRequest } from '../http.ts'
+import { hashSenha, senhaConfere } from '../senha.ts'
 
 export const authRouter = Router()
 
@@ -42,25 +43,30 @@ authRouter.post(
     const chave = `${req.ip}:${email}`
     loginLimit.check(chave)
 
-    // A comparacao acontece no banco, pelo pgcrypto: a senha em claro nunca e
-    // guardada nem comparada em memoria do Node.
     const { rows } = await pool.query<{
       id: string
       email: string
+      encrypted_password: string
       must_change_password: boolean
     }>(
-      `select id, email, must_change_password from auth.users
-        where lower(email) = $1
-          and encrypted_password = extensions.crypt($2, encrypted_password)`,
-      [email, password],
+      `select id, email, encrypted_password, must_change_password from auth.users
+        where lower(email) = $1`,
+      [email],
     )
 
-    if (rows.length === 0) {
+    const usuario = rows[0]
+    // A verificacao roda mesmo sem usuario, com um hash descartavel: sem isso,
+    // o tempo de resposta diria quais e-mails existem no GC.
+    const confere = await senhaConfere(
+      password,
+      usuario?.encrypted_password ?? 'scrypt$16384$8$1$c2Fs$dA==',
+    )
+
+    if (!usuario || !confere) {
       loginLimit.fail(chave)
       throw new HttpError(401, 'E-mail ou senha incorretos.')
     }
 
-    const usuario = rows[0]!
     loginLimit.reset(chave)
 
     // Senha provisoria, entregue pela lideranca: nao nasce sessao aqui. O que
@@ -100,10 +106,9 @@ authRouter.post(
 
     const { rows } = await pool.query<{ id: string; email: string }>(
       `insert into auth.users (email, encrypted_password, raw_user_meta_data)
-       values ($1, extensions.crypt($2, extensions.gen_salt('bf', 10)),
-               jsonb_build_object('invite_token', $3::text))
+       values ($1, $2, jsonb_build_object('invite_token', $3::text))
        returning id, email`,
-      [email, password, inviteToken],
+      [email, await hashSenha(password), inviteToken],
     )
 
     res.status(201).json(sessionPayload(await issueSession(rows[0]!)))
@@ -155,12 +160,12 @@ authRouter.post(
 
     const { rows } = await pool.query<{ id: string; email: string }>(
       `update auth.users
-          set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf', 10)),
+          set encrypted_password = $2,
               must_change_password = false,
               updated_at = now()
         where id = $1 and must_change_password
         returning id, email`,
-      [userId, nova],
+      [userId, await hashSenha(nova)],
     )
 
     if (rows.length === 0) {
@@ -186,20 +191,22 @@ authRouter.post(
     const chave = `senha:${userId}`
     loginLimit.check(chave)
 
-    const { rowCount } = await pool.query(
-      `update auth.users
-          set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf', 10)),
-              must_change_password = false,
-              updated_at = now()
-        where id = $1
-          and encrypted_password = extensions.crypt($3, encrypted_password)`,
-      [userId, next, current],
+    const { rows } = await pool.query<{ encrypted_password: string }>(
+      'select encrypted_password from auth.users where id = $1',
+      [userId],
     )
 
-    if (rowCount === 0) {
+    if (!rows[0] || !(await senhaConfere(current, rows[0].encrypted_password))) {
       loginLimit.fail(chave)
       throw new HttpError(403, 'Senha atual incorreta.')
     }
+
+    await pool.query(
+      `update auth.users
+          set encrypted_password = $2, must_change_password = false, updated_at = now()
+        where id = $1`,
+      [userId, await hashSenha(next)],
+    )
 
     loginLimit.reset(chave)
 

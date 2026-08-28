@@ -67,11 +67,14 @@ create or replace function public.create_invite(p_profile_id uuid, p_email text)
 returns table (invite_id uuid, token text, expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = public, extensions, pg_temp
+set search_path = public, pg_temp
 as $$
 declare
   me uuid := app.require_leader();
-  v_token text := encode(extensions.gen_random_bytes(32), 'hex');
+  -- Dois UUIDv4 concatenados: 244 bits de aleatoriedade, sem depender de
+  -- extensao para gerar bytes.
+  v_token text := replace(gen_random_uuid()::text, '-', '')
+               || replace(gen_random_uuid()::text, '-', '');
   v_email text := lower(btrim(p_email));
   v_id uuid;
   v_expires timestamptz := now() + interval '14 days';
@@ -91,7 +94,7 @@ begin
 
   insert into public.invites (profile_id, email, token_hash, created_by, expires_at)
   values (p_profile_id, v_email,
-          encode(extensions.digest(v_token, 'sha256'), 'hex'), me, v_expires)
+          encode(sha256(convert_to(v_token, 'UTF8')), 'hex'), me, v_expires)
   returning id into v_id;
 
   perform app.audit('invite.created', 'invites', v_id, null,
@@ -120,11 +123,14 @@ create or replace function public.create_bootstrap_invite(p_full_name text, p_em
 returns table (invite_id uuid, token text, expires_at timestamptz)
 language plpgsql
 security definer
-set search_path = public, extensions, pg_temp
+set search_path = public, pg_temp
 as $$
 declare
   v_profile uuid;
-  v_token text := encode(extensions.gen_random_bytes(32), 'hex');
+  -- Dois UUIDv4 concatenados: 244 bits de aleatoriedade, sem depender de
+  -- extensao para gerar bytes.
+  v_token text := replace(gen_random_uuid()::text, '-', '')
+               || replace(gen_random_uuid()::text, '-', '');
   v_email text := lower(btrim(p_email));
   v_id uuid;
   v_expires timestamptz := now() + interval '14 days';
@@ -145,7 +151,7 @@ begin
   update public.profiles set email = v_email where id = v_profile;
 
   insert into public.invites (profile_id, email, token_hash, expires_at)
-  values (v_profile, v_email, encode(extensions.digest(v_token, 'sha256'), 'hex'), v_expires)
+  values (v_profile, v_email, encode(sha256(convert_to(v_token, 'UTF8')), 'hex'), v_expires)
   returning id into v_id;
 
   return query select v_id, v_token, v_expires;
@@ -160,7 +166,7 @@ create or replace function app.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, extensions, pg_temp
+set search_path = public, pg_temp
 as $$
 declare
   v_token text := new.raw_user_meta_data ->> 'invite_token';
@@ -172,7 +178,7 @@ begin
   end if;
 
   select * into v_invite from public.invites
-   where token_hash = encode(extensions.digest(v_token, 'sha256'), 'hex')
+   where token_hash = encode(sha256(convert_to(v_token, 'UTF8')), 'hex')
      and status = 'pending'
      and expires_at > now();
 

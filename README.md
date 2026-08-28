@@ -551,6 +551,41 @@ O Caddy pede o certificado ao Let's Encrypt sozinho na primeira subida — o
 domínio já precisa estar resolvendo para o IP da VPS, e as portas 80 e 443
 livres.
 
+### Como está publicado hoje
+
+`discipulos.igrejanovoscomecos.com.br` roda na VPS da igreja — um cPanel que já
+atende outros sites. Três restrições da máquina, três modos de sobreposição:
+
+| Restrição | Modo |
+| --- | --- |
+| Apache ocupa 80/443 | `docker-compose.proxy.yml` — Caddy só em `127.0.0.1:8081` |
+| Bridge do Docker sem DNS (firewall bloqueia UDP 53) | `docker-compose.host.yml` — rede do host |
+| Kernel 3.10 recusa o Postgres em container | `docker-compose.banco-do-host.yml` — PostgreSQL 16 nativo |
+
+```bash
+docker compose -f docker-compose.yml \
+               -f docker-compose.host.yml \
+               -f docker-compose.banco-do-host.yml up -d postgrest api web
+```
+
+As migrations, nesse caso, rodam pelo psql da máquina:
+
+```bash
+DB_DIR=/opt/cuidar-gc/db PGHOST=/tmp PGPORT=5433 PGDATABASE=cuidar ./scripts/migrate.sh
+```
+
+O Apache termina o TLS (certificado do `acme.sh`, renovação automática já
+agendada) e repassa tudo para o Caddy. O vhost vive em
+`/etc/apache2/conf.d/includes/post_virtualhost_global.conf` — o lugar do cPanel
+que sobrevive a reconstruções.
+
+> 🪤 Duas armadilhas que custaram tempo, documentadas para a próxima vez:
+> o vhost precisa nascer com o **IP explícito** (`162.241.100.219:80`), porque
+> um `*:80` sequer é consultado quando existe conjunto casando por IP exato; e
+> o site do Caddy precisa de **host vazio** (`http://:8081`), senão o Host
+> público repassado pelo Apache não casa e o Caddy responde 200 com corpo
+> vazio — o pior tipo de erro, o que parece ter funcionado.
+
 ### Quando a máquina já tem um servidor web
 
 Se a VPS já atende outros sites (um Apache do cPanel, por exemplo), tomar as

@@ -58,6 +58,12 @@ services:
     build:
       network: host
     environment:
-      DOMAIN: 127.0.0.1:${WEB_PORT:-8081}
+      # 🪤 Duas armadilhas em um endereco so:
+      #   `http://` explicito - sem ele o Caddy liga o HTTPS automatico e tenta
+      #     abrir a porta 80, que nesta maquina e do servidor web existente.
+      #   host vazio - o proxy da frente repassa o Host publico, e um site
+      #     amarrado a `127.0.0.1` nao casaria com ele. Caddy responderia 200
+      #     com corpo vazio, que e o pior tipo de erro: parece que funcionou.
+      DOMAIN: http://:${WEB_PORT:-8081}
       UPSTREAM_API: 127.0.0.1:${API_PORT:-3011}
       UPSTREAM_REST: 127.0.0.1:${REST_PORT:-3012}

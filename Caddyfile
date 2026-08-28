@@ -21,17 +21,20 @@
 		-Server
 	}
 
+	# Os enderecos vem do ambiente porque nem toda maquina permite que os
+	# containers conversem por nome: onde a rede bridge do Docker nao funciona,
+	# tudo roda na rede do host e estes viram 127.0.0.1.
 	# Dados: o PostgREST valida o JWT e a RLS decide o que cada pessoa ve.
 	handle_path /rest/v1/* {
-		reverse_proxy postgrest:3000
+		reverse_proxy {$UPSTREAM_REST:postgrest:3000}
 	}
 
 	# Sessao e geracao da semana.
 	handle /auth/* {
-		reverse_proxy api:3001
+		reverse_proxy {$UPSTREAM_API:api:3001}
 	}
 	handle /api/* {
-		reverse_proxy api:3001
+		reverse_proxy {$UPSTREAM_API:api:3001}
 	}
 
 	# A PWA. O `try_files` e o fallback de SPA: recarregar /minha-semana

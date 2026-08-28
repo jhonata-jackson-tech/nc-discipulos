@@ -1,0 +1,27 @@
+# =============================================================================
+# Sobreposicao para quando o Postgres nao roda em container.
+#
+# Servidor com kernel antigo (CentOS 7, 3.10) recusa as imagens atuais do
+# Postgres: o initdb morre com "Operation not permitted". Se a maquina ja tem
+# um PostgreSQL 16 nativo, e ele que atende - a aplicacao ganha um banco e
+# papeis so seus, sem dividir dado com ninguem.
+#
+# As migrations, nesse caso, rodam pelo psql da propria maquina:
+#
+#   DB_DIR=/opt/cuidar-gc/db PGHOST=127.0.0.1 PGPORT=5433 ./scripts/migrate.sh
+#
+#   docker compose -f docker-compose.yml -f docker-compose.host.yml \
+#                  -f docker-compose.banco-do-host.yml up -d postgrest api web
+# =============================================================================
+services:
+  db:
+    profiles: ['banco-em-container']
+
+  migrate:
+    profiles: ['banco-em-container']
+
+  postgrest:
+    depends_on: !reset []
+
+  api:
+    depends_on: !reset []

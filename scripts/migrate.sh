@@ -9,6 +9,11 @@
 # =============================================================================
 set -eu
 
+# Onde estao migrations, seed e papeis. No container e `/db`; rodando direto no
+# servidor (maquina cujo kernel nao aguenta o Postgres em container), aponte
+# para a pasta do projeto: DB_DIR=/opt/cuidar-gc/db ./scripts/migrate.sh
+DB_DIR="${DB_DIR:-/db}"
+
 psql() { command psql -v ON_ERROR_STOP=1 --no-psqlrc -q "$@"; }
 
 echo "[migrate] aguardando o banco..."
@@ -22,7 +27,7 @@ psql -c "create schema if not exists migrations;
            applied_at timestamptz not null default now()
          );"
 
-for arquivo in /db/migrations/*.sql; do
+for arquivo in "$DB_DIR"/migrations/*.sql; do
   versao=$(basename "$arquivo")
   ja=$(psql -At -c "select 1 from migrations.applied where version = '$versao'")
 
@@ -42,17 +47,17 @@ done
 echo "[migrate] papeis de conexao"
 psql -v authenticator_password="$AUTHENTICATOR_PASSWORD" \
      -v auth_service_password="$AUTH_SERVICE_PASSWORD" \
-     -f /db/roles.sql
+     -f "$DB_DIR"/roles.sql
 
 if [ "${ENABLE_SERVICE_ROLE_API:-}" = "true" ]; then
   echo "[migrate] DESENVOLVIMENTO: liberando service_role pela API"
-  psql -f /db/dev-service-role.sql
+  psql -f "$DB_DIR"/dev-service-role.sql
 fi
 
 integrantes=$(psql -At -c "select count(*) from public.profiles")
 if [ "$integrantes" = "0" ]; then
   echo "[migrate] banco vazio: aplicando o seed do GC"
-  psql --single-transaction -f /db/seed.sql
+  psql --single-transaction -f "$DB_DIR"/seed.sql
 else
   echo "[migrate] $integrantes integrantes ja cadastrados: seed nao roda"
 fi

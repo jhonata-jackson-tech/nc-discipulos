@@ -1,0 +1,63 @@
+# =============================================================================
+# Sobreposicao para maquinas cuja rede bridge do Docker nao tem saida.
+#
+# Em servidor compartilhado com firewall proprio (cPanel com CSF, por exemplo)
+# e comum a bridge nao resolver DNS: a politica de FORWARD e DROP e so a
+# `docker0` tem regra. Sem DNS, a entrega das notificacoes push nao sai.
+#
+# A saida e a mesma que os outros servicos da maquina ja usam: rede do host.
+# Cada servico escuta em uma porta so dele, **apenas em 127.0.0.1** - nada
+# fica exposto na internet, e quem publica o dominio e o servidor web que ja
+# existe, apontando para a porta do Caddy.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.host.yml up -d
+# =============================================================================
+services:
+  db:
+    network_mode: host
+    # Na rede do host o Postgres escutaria em todas as interfaces - inclusive
+    # no IP publico. `listen_addresses` fecha isso.
+    command: >
+      postgres -c listen_addresses=127.0.0.1 -c port=${DB_PORT:-5442}
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p ${DB_PORT:-5442} -U ${POSTGRES_USER:-postgres}']
+
+  migrate:
+    network_mode: host
+    environment:
+      PGHOST: 127.0.0.1
+      PGPORT: ${DB_PORT:-5442}
+
+  postgrest:
+    network_mode: host
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@127.0.0.1:${DB_PORT:-5442}/${POSTGRES_DB:-cuidar}
+      PGRST_SERVER_HOST: '127.0.0.1'
+      PGRST_SERVER_PORT: '${REST_PORT:-3012}'
+
+  api:
+    network_mode: host
+    build:
+      # A bridge nao resolve DNS aqui: sem isto, o `npm ci` do build morre.
+      network: host
+    environment:
+      DATABASE_URL: postgres://auth_service:${AUTH_SERVICE_PASSWORD}@127.0.0.1:${DB_PORT:-5442}/${POSTGRES_DB:-cuidar}
+      PORT: '${API_PORT:-3011}'
+      # Servidor web da maquina + Caddy.
+      TRUST_PROXY_HOPS: '2'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:${API_PORT:-3011}/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+  web:
+    network_mode: host
+    build:
+      network: host
+    environment:
+      DOMAIN: 127.0.0.1:${WEB_PORT:-8081}
+      UPSTREAM_API: 127.0.0.1:${API_PORT:-3011}
+      UPSTREAM_REST: 127.0.0.1:${REST_PORT:-3012}

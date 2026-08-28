@@ -4,9 +4,11 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-COPY server/package.json server/package-lock.json* ./server/
+COPY server/package.json server/package-lock.json ./server/
 WORKDIR /app/server
-RUN npm install --no-audit --no-fund
+# `npm ci` em vez de `install`: instala exatamente o lockfile, sem resolver
+# versoes de novo - mais rapido e reproduzivel na VPS.
+RUN npm ci --no-audit --no-fund
 
 WORKDIR /app
 COPY server/ ./server/
@@ -20,8 +22,8 @@ FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY server/package.json server/package-lock.json* ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+COPY server/package.json server/package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY --from=build /app/server/dist ./dist
 

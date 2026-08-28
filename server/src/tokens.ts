@@ -35,11 +35,43 @@ export function verifyAccessToken(token: string): SessionClaims | null {
   try {
     const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] })
     if (typeof payload === 'string' || !payload.sub) return null
+
+    // A checagem do papel nao e formalidade: o token de troca de senha e
+    // assinado com o mesmo segredo e passaria por aqui sem ela, virando uma
+    // sessao completa para quem ainda esta com a senha provisoria.
+    if (payload.role !== 'authenticated') return null
+
     return {
       sub: String(payload.sub),
       email: String(payload.email ?? ''),
       role: 'authenticated',
     }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Token de uso unico e curto: serve so para definir a primeira senha.
+ *
+ * Nao carrega `role: 'authenticated'`, entao o PostgREST o trata como visitante
+ * anonimo - que nao le nada do dominio. Quem esta com senha provisoria pode
+ * trocar a senha e mais nada.
+ */
+export function signChangeToken(userId: string): string {
+  return jwt.sign({ sub: userId, scope: 'change_password' }, config.jwtSecret, {
+    algorithm: 'HS256',
+    expiresIn: '20m',
+  })
+}
+
+export function verifyChangeToken(token: string): string | null {
+  try {
+    const payload = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] })
+    if (typeof payload === 'string' || payload.scope !== 'change_password' || !payload.sub) {
+      return null
+    }
+    return String(payload.sub)
   } catch {
     return null
   }

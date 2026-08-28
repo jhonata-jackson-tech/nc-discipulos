@@ -277,6 +277,22 @@ cp cadastros.exemplo.csv cadastros.local.csv   # o .local fica fora do Git
 npm run cadastrar:lote -- cadastros.local.csv https://discipulos.exemplo.com.br
 ```
 
+**Com senha provisória, sem link.** Quando a liderança prefere entregar o acesso
+pessoalmente, basta uma senha no fim do comando: as contas já nascem criadas com
+ela e com a troca obrigatória no primeiro acesso.
+
+```bash
+npm run cadastrar:lote -- cadastros.local.csv https://discipulos.exemplo.com.br NovaVida2026
+```
+
+Enquanto a pessoa não criar a própria senha, **a conta não abre nada**: o login
+não devolve sessão, só o direito de definir a senha. Um token com esse escopo é
+tratado como visitante pelo PostgREST, e visitante não lê uma linha do GC.
+
+Vale saber o que essa escolha custa: a senha é a mesma para todo mundo, então
+até cada um trocar, quem souber a senha e o e-mail de alguém entra no lugar
+dessa pessoa. Entregue no mesmo dia e peça que troquem na hora.
+
 O arquivo com gente de verdade **não vai para o repositório**: dados pessoais de
 integrantes não têm por que morar no Git, e é a mesma razão pela qual o
 `db/seed.sql` traz só os nomes.

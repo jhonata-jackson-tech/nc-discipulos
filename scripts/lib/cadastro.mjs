@@ -10,7 +10,7 @@
  * pessoa, e tem lugar proprio no assistente de primeiros passos.
  */
 import { randomUUID } from 'node:crypto'
-import { sha256 } from './local.mjs'
+import { criarConta, sha256, sql } from './local.mjs'
 
 const PAPEIS = ['leader', 'supervisor', 'disciple', 'member']
 
@@ -41,7 +41,12 @@ export async function grupoPadrao(admin) {
 }
 
 /**
- * @returns {Promise<{nome: string, acao: string, link: string|null}>}
+ * @param {object} pessoa
+ * @param {string} [pessoa.senhaProvisoria] Quando informada, a conta ja nasce
+ *   criada com essa senha e a troca obrigatoria no primeiro acesso - o caminho
+ *   para quando a lideranca entrega o acesso pessoalmente, em vez de mandar um
+ *   link. Sem ela, o retorno e o link de convite de sempre.
+ * @returns {Promise<{nome: string, acao: string, link: string|null, senha: string|null}>}
  */
 export async function cadastrar(admin, grupo, pessoa) {
   const nome = pessoa.nome?.trim()
@@ -106,7 +111,7 @@ export async function cadastrar(admin, grupo, pessoa) {
   }
 
   if (registro.user_id) {
-    return { nome, acao: `${acao} (já tem acesso)`, link: null }
+    return { nome, acao: `${acao} (já tem acesso)`, link: null, senha: null }
   }
 
   // Um convite pendente por pessoa: o anterior perde a validade.
@@ -118,10 +123,28 @@ export async function cadastrar(admin, grupo, pessoa) {
     .insert({ profile_id: registro.id, email, token_hash: sha256(token) })
   if (error) throw new Error(error.message)
 
-  const site = (pessoa.site ?? 'http://localhost:5173').replace(/\/$/, '')
-  return {
-    nome,
-    acao,
-    link: `${site}/convite?token=${token}&email=${encodeURIComponent(email)}`,
+  // Sem senha provisoria, o caminho e o de sempre: a pessoa abre o link e cria
+  // a senha dela.
+  if (!pessoa.senhaProvisoria) {
+    const site = (pessoa.site ?? 'http://localhost:5173').replace(/\/$/, '')
+    return {
+      nome,
+      acao,
+      link: `${site}/convite?token=${token}&email=${encodeURIComponent(email)}`,
+      senha: null,
+    }
   }
+
+  // Com senha provisoria, a conta nasce aqui - pelo mesmo caminho de sempre,
+  // consumindo o convite recem-emitido. A regra que exige convite valido
+  // continua valendo; ninguem ganhou um atalho.
+  await criarConta({ email, password: pessoa.senhaProvisoria, inviteToken: token })
+
+  // A partir daqui a conta existe mas nao serve para nada alem de definir a
+  // propria senha.
+  await sql('update auth.users set must_change_password = true where lower(email) = lower($1)', [
+    email,
+  ])
+
+  return { nome, acao: `${acao} (acesso criado)`, link: null, senha: pessoa.senhaProvisoria }
 }

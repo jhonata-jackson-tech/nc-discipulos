@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
-import { signIn } from '@/lib/auth'
+import { precisaDefinirSenha, signIn, type PrimeiraSenhaPendente } from '@/lib/auth'
+import { FirstPasswordPage } from './first-password-page'
 import { friendlyError } from '@/lib/errors'
 import { AuthLayout } from './auth-layout'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ export function LoginPage() {
   const [serverError, setServerError] = React.useState<string | null>(null)
   const [showPassword, setShowPassword] = React.useState(false)
   const [helpOpen, setHelpOpen] = React.useState(false)
+  const [primeiroAcesso, setPrimeiroAcesso] = React.useState<PrimeiraSenhaPendente | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -41,13 +43,29 @@ export function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setServerError(null)
     try {
-      await signIn(values.email.trim().toLowerCase(), values.password)
+      const resultado = await signIn(values.email.trim().toLowerCase(), values.password)
+
+      // Senha entregue pela liderança: não há sessão ainda, só o direito de
+      // criar a própria senha.
+      if (precisaDefinirSenha(resultado)) {
+        setPrimeiroAcesso(resultado)
+        return
+      }
     } catch (error) {
       setServerError(friendlyError(error))
       return
     }
     navigate('/', { replace: true })
   })
+
+  if (primeiroAcesso) {
+    return (
+      <FirstPasswordPage
+        changeToken={primeiroAcesso.changeToken}
+        email={primeiroAcesso.user.email}
+      />
+    )
+  }
 
   return (
     <AuthLayout

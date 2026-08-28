@@ -32,6 +32,28 @@ interface SessionResponse {
   user: AuthUser
 }
 
+/**
+ * Quem recebeu a senha da liderança precisa criar a própria antes de qualquer
+ * outra coisa. Nesse caso o login não devolve sessão: devolve só o direito de
+ * definir a senha, e é por isso que a resposta tem duas formas possíveis.
+ */
+export interface PrimeiraSenhaPendente {
+  mustChangePassword: true
+  changeToken: string
+  user: AuthUser
+}
+
+interface PrimeiraSenhaResponse {
+  must_change_password: true
+  change_token: string
+  user: AuthUser
+}
+
+type RespostaLogin = SessionResponse | PrimeiraSenhaResponse
+
+const pedePrimeiraSenha = (data: RespostaLogin): data is PrimeiraSenhaResponse =>
+  'must_change_password' in data && data.must_change_password
+
 /** Erro com a mensagem que o servidor escreveu, pronta para a tela. */
 export class AuthError extends Error {
   status: number
@@ -112,8 +134,36 @@ export function onAuthStateChange(listener: (session: Session | null) => void): 
   return () => listeners.delete(listener)
 }
 
-export async function signIn(email: string, password: string): Promise<Session> {
-  const session = toSession(await post<SessionResponse>('/auth/login', { email, password }))
+export async function signIn(
+  email: string,
+  password: string,
+): Promise<Session | PrimeiraSenhaPendente> {
+  const data = await post<RespostaLogin>('/auth/login', { email, password })
+
+  if (pedePrimeiraSenha(data)) {
+    return { mustChangePassword: true, changeToken: data.change_token, user: data.user }
+  }
+
+  const session = toSession(data)
+  write(session)
+  return session
+}
+
+export const precisaDefinirSenha = (
+  resultado: Session | PrimeiraSenhaPendente,
+): resultado is PrimeiraSenhaPendente => 'mustChangePassword' in resultado
+
+/** Fecha o primeiro acesso: define a senha e já entra. */
+export async function definirPrimeiraSenha(
+  changeToken: string,
+  novaSenha: string,
+): Promise<Session> {
+  const session = toSession(
+    await post<SessionResponse>('/auth/primeira-senha', {
+      change_token: changeToken,
+      new_password: novaSenha,
+    }),
+  )
   write(session)
   return session
 }

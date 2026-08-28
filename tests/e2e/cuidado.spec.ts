@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { nameOf, resetCareState, signIn, state } from './support'
+import { criarAcessoProvisorio, nameOf, resetCareState, signIn, state } from './support'
 
 test.skip(!state.ready, 'Ambiente de teste não configurado.')
 
@@ -15,6 +15,33 @@ test.describe('entrada e minha semana', () => {
     await page.getByLabel('Senha', { exact: true }).fill('senha-errada-123')
     await page.getByRole('button', { name: 'Entrar' }).click()
 
+    await expect(page.getByText('E-mail ou senha incorretos.')).toBeVisible()
+  })
+
+  test('a senha entregue pela liderança só serve para criar a própria senha', async ({ page }) => {
+    const { email, senha } = await criarAcessoProvisorio()
+
+    await page.goto('/entrar')
+    await page.getByLabel('E-mail').fill(email)
+    await page.getByLabel('Senha', { exact: true }).fill(senha)
+    await page.getByRole('button', { name: 'Entrar' }).click()
+
+    // Não entra no app: cai na criação da senha.
+    await expect(page.getByRole('heading', { name: 'Crie sua senha' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Minha semana' })).toHaveCount(0)
+
+    await page.getByLabel('Sua senha').fill('MinhaSenha123')
+    await page.getByLabel('Repita a senha').fill('MinhaSenha123')
+    await page.getByRole('button', { name: 'Criar senha e entrar' }).click()
+
+    // Agora sim, dentro do app.
+    await expect(page.getByRole('link', { name: 'Minha semana' }).first()).toBeVisible()
+
+    // E a senha entregue não vale mais.
+    await page.goto('/entrar')
+    await page.getByLabel('E-mail').fill(email)
+    await page.getByLabel('Senha', { exact: true }).fill(senha)
+    await page.getByRole('button', { name: 'Entrar' }).click()
     await expect(page.getByText('E-mail ou senha incorretos.')).toBeVisible()
   })
 

@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import { adminClient, type LocalClient } from '../../scripts/lib/local.mjs'
+import { cadastrar } from '../../scripts/lib/cadastro.mjs'
 import { STATE_FILE } from './global-setup'
 
 export interface E2EState {
@@ -43,6 +45,31 @@ export function nameOf(who: string) {
 /** Cliente administrativo, usado apenas para preparar cenarios de teste. */
 export function admin(): LocalClient {
   return adminClient()
+}
+
+/**
+ * Cria um acesso com senha provisoria, pelo mesmo caminho que a lideranca usa.
+ *
+ * Cada chamada gera uma pessoa nova: o teste roda em desktop e em celular
+ * contra o mesmo banco, e uma senha provisoria so serve uma vez.
+ */
+export async function criarAcessoProvisorio(): Promise<{ email: string; senha: string }> {
+  const tag = randomUUID().slice(0, 8)
+  const email = `provisorio.${tag}@e2e.cuidar.local`
+  const senha = `Provisoria-${tag}`
+
+  await cadastrar(
+    admin(),
+    { id: state.groupId!, name: 'e2e' },
+    {
+      nome: `Provisório e2e ${tag}`,
+      email,
+      papel: 'member',
+      senhaProvisoria: senha,
+    },
+  )
+
+  return { email, senha }
 }
 
 /**

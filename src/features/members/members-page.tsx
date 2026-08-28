@@ -193,7 +193,9 @@ export function MembersPage() {
       {/* ------------------------------------------------ cartoes no celular */}
       <div className="grid gap-3 md:grid-cols-2 lg:hidden">
         {filtered.map((member) => (
-          <Card key={member.id} className="p-4">
+          // `min-w-0` no cartao: item de grid tem largura minima automatica, e
+          // um e-mail comprido (que nao quebra) esticaria a coluna alem da tela.
+          <Card key={member.id} className="min-w-0 p-4">
             <div className="flex items-start gap-3">
               <Person
                 name={member.full_name}

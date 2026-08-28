@@ -15,6 +15,12 @@
  * `cadastros.exemplo.csv` para o formato.
  *
  *   node scripts/cadastrar-lote.mjs cadastros.local.csv https://seu-dominio
+ *
+ * Com uma senha provisoria no fim, as contas ja nascem criadas com ela e a
+ * troca obrigatoria no primeiro acesso - para quando a lideranca entrega o
+ * acesso pessoalmente, em vez de mandar link:
+ *
+ *   node scripts/cadastrar-lote.mjs cadastros.local.csv https://seu-dominio NovaVida2026
  */
 import { readFileSync } from 'node:fs'
 import { adminClient, configurado, encerrar } from './lib/local.mjs'
@@ -27,6 +33,12 @@ if (!configurado) {
 
 const arquivo = process.argv[2] ?? 'cadastros.local.csv'
 const site = process.argv[3] ?? process.env.SITE_URL ?? 'http://localhost:5173'
+const senhaProvisoria = process.argv[4] ?? process.env.SENHA_PROVISORIA ?? null
+
+if (senhaProvisoria && senhaProvisoria.length < 8) {
+  console.error('A senha provisória precisa ter pelo menos 8 caracteres.')
+  process.exit(1)
+}
 
 let linhas
 try {
@@ -59,23 +71,38 @@ let falhas = 0
 
 for (const pessoa of pessoas) {
   try {
-    const resultado = await cadastrar(admin, grupo, { ...pessoa, site })
+    const resultado = await cadastrar(admin, grupo, { ...pessoa, site, senhaProvisoria })
     console.log(`→ ${resultado.nome}: ${resultado.acao}`)
-    if (resultado.link) links.push(resultado)
+    if (resultado.link || resultado.senha) links.push(resultado)
   } catch (erro) {
     falhas += 1
     console.error(`✗ ${pessoa.nome || '(sem nome)'}: ${erro.message}`)
   }
 }
 
-console.log(`\n${'='.repeat(70)}\nLinks de convite — valem 14 dias, uso único\n${'='.repeat(70)}`)
-for (const { nome, link } of links) {
-  console.log(`\n${nome}\n${link}`)
+const risco = '='.repeat(70)
+
+if (senhaProvisoria) {
+  console.log(`\n${risco}\nAcessos criados — entregue pessoalmente\n${risco}`)
+  console.log(`\nEndereço: ${site}`)
+  console.log(`Senha provisória de todos: ${senhaProvisoria}`)
+  console.log('\nNo primeiro acesso o sistema exige que cada um crie a própria senha.')
+  console.log('Até criar, a conta não abre nada: só serve para definir a senha.\n')
+  for (const { nome } of links) console.log(`  · ${nome}`)
+  console.log(
+    `\n${links.length} acesso(s) criado(s)${falhas ? `, ${falhas} falha(s)` : ''}.` +
+      '\nA senha é a mesma para todo mundo: peça que troquem no mesmo dia.',
+  )
+} else {
+  console.log(`\n${risco}\nLinks de convite — valem 14 dias, uso único\n${risco}`)
+  for (const { nome, link } of links) {
+    console.log(`\n${nome}\n${link}`)
+  }
+  console.log(`\n${links.length} link(es) a enviar${falhas ? `, ${falhas} falha(s)` : ''}.`)
 }
 
 console.log(
-  `\n${links.length} link(es) a enviar${falhas ? `, ${falhas} falha(s)` : ''}.` +
-    '\nConfirme o gênero de cuidado e o discipulado em Primeiros passos, dentro do sistema.\n',
+  '\nConfirme o gênero de cuidado e o discipulado em Primeiros passos, dentro do sistema.\n',
 )
 
 await encerrar()

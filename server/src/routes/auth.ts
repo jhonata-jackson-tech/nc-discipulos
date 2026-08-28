@@ -5,6 +5,8 @@ import {
   revokeAllForUser,
   revokeRefreshToken,
   rotateSession,
+  signChangeToken,
+  verifyChangeToken,
   type IssuedSession,
 } from '../tokens.ts'
 import { asyncRoute, HttpError, rateLimiter, requireSession, type AuthedRequest } from '../http.ts'
@@ -42,8 +44,12 @@ authRouter.post(
 
     // A comparacao acontece no banco, pelo pgcrypto: a senha em claro nunca e
     // guardada nem comparada em memoria do Node.
-    const { rows } = await pool.query<{ id: string; email: string }>(
-      `select id, email from auth.users
+    const { rows } = await pool.query<{
+      id: string
+      email: string
+      must_change_password: boolean
+    }>(
+      `select id, email, must_change_password from auth.users
         where lower(email) = $1
           and encrypted_password = extensions.crypt($2, encrypted_password)`,
       [email, password],
@@ -54,8 +60,22 @@ authRouter.post(
       throw new HttpError(401, 'E-mail ou senha incorretos.')
     }
 
+    const usuario = rows[0]!
     loginLimit.reset(chave)
-    res.json(sessionPayload(await issueSession(rows[0]!)))
+
+    // Senha provisoria, entregue pela lideranca: nao nasce sessao aqui. O que
+    // sai e apenas o direito de definir a senha - com esse token, o PostgREST
+    // trata quem chama como visitante, e visitante nao le nada.
+    if (usuario.must_change_password) {
+      res.json({
+        must_change_password: true,
+        change_token: signChangeToken(usuario.id),
+        user: { id: usuario.id, email: usuario.email },
+      })
+      return
+    }
+
+    res.json(sessionPayload(await issueSession(usuario)))
   }),
 )
 
@@ -112,6 +132,45 @@ authRouter.post(
   }),
 )
 
+/**
+ * Definicao da primeira senha, para quem entrou com a provisoria.
+ *
+ * O token de troca ja provou que a pessoa sabia a senha entregue - nao faz
+ * sentido pedi-la de novo. Ao final, a sessao de verdade nasce aqui: a pessoa
+ * segue direto para o app, sem passar pelo login outra vez.
+ */
+authRouter.post(
+  '/primeira-senha',
+  asyncRoute(async (req, res) => {
+    const token = typeof req.body?.change_token === 'string' ? req.body.change_token : ''
+    const nova = typeof req.body?.new_password === 'string' ? req.body.new_password : ''
+
+    const userId = token ? verifyChangeToken(token) : null
+    if (!userId) {
+      throw new HttpError(401, 'Este acesso expirou. Entre novamente com a senha que você recebeu.')
+    }
+    if (nova.length < 8) {
+      throw new HttpError(422, 'A nova senha precisa ter pelo menos 8 caracteres.')
+    }
+
+    const { rows } = await pool.query<{ id: string; email: string }>(
+      `update auth.users
+          set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf', 10)),
+              must_change_password = false,
+              updated_at = now()
+        where id = $1 and must_change_password
+        returning id, email`,
+      [userId, nova],
+    )
+
+    if (rows.length === 0) {
+      throw new HttpError(409, 'Esta senha já foi definida. Entre com ela.')
+    }
+
+    res.json(sessionPayload(await issueSession(rows[0]!)))
+  }),
+)
+
 /** Troca de senha pelo proprio dono, ja autenticado. */
 authRouter.post(
   '/password',
@@ -130,6 +189,7 @@ authRouter.post(
     const { rowCount } = await pool.query(
       `update auth.users
           set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf', 10)),
+              must_change_password = false,
               updated_at = now()
         where id = $1
           and encrypted_password = extensions.crypt($3, encrypted_password)`,

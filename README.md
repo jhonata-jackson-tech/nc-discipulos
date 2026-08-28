@@ -22,7 +22,7 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 - [A regra de distribuição](#a-regra-de-distribuição)
 - [Papéis e permissões](#papéis-e-permissões)
 - [Testes](#testes)
-- [PWA](#pwa)
+- [PWA e notificações](#pwa-e-notificações)
 - [Deploy na VPS](#deploy-na-vps)
 - [Estrutura de pastas](#estrutura-de-pastas)
 
@@ -40,12 +40,12 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Supervisão reservada e anotações privadas | ✅ |
 | Notificações internas | ✅ |
 | PWA instalável com cache do shell | ✅ |
+| Notificações push (fora do app) | ✅ |
 | Tema claro, escuro e "seguir o sistema" | ✅ |
 | Testes unitários, de regras no banco, de RLS e end-to-end | ✅ |
 
 Não há recuperação de senha automática — é uma decisão, e está explicada em
-[Senhas](#senhas). Notificações push (fora do app) ficaram preparadas na
-arquitetura, mas não estão ligadas — veja [Pendências](#pendências).
+[Senhas](#senhas).
 
 ---
 
@@ -252,6 +252,23 @@ A função devolve um `token`. Monte o link e abra no navegador:
 https://seu-dominio/convite?token=<token>&email=email-real@exemplo.com
 ```
 
+Também dá para cadastrar alguém e obter o link de convite direto pela linha de
+comando — útil no começo, quando ainda não há ninguém logado para usar a tela de
+Integrantes:
+
+```bash
+npm run cadastrar -- \
+  --nome "Fulano de Tal" --email fulano@exemplo.com \
+  --whatsapp 21999999999 --nascimento 21/03/1996 \
+  --papel disciple --genero male --lider "Nome do Líder" \
+  --site https://discipulos.exemplo.com.br
+```
+
+Ele não faz nada que a interface não faça: completa o cadastro, vincula ao GC,
+liga o discipulado (o banco recusa gêneros diferentes) e devolve o link. Use
+`--atual "Nome como está no sistema"` para completar quem veio do seed com o
+nome curto, em vez de duplicar.
+
 A partir daí, o líder define a senha, entra e passa pelo assistente
 **Primeiros passos**:
 
@@ -423,19 +440,60 @@ npx playwright install --with-deps
 
 ---
 
-## PWA
+## PWA e notificações
 
-O manifest e o service worker são gerados pelo `vite-plugin-pwa` no build. Os
-ícones em `public/icons/` são gerados por `node scripts/generate-icons.mjs` e
-podem ser substituídos pela identidade definitiva do GC.
+### Instalar como app
 
-Para instalar no celular: abra a aplicação no Chrome ou Safari e use
-**Adicionar à tela de início**.
+O manifest e o service worker são gerados no build. Para instalar:
 
-O cache guarda apenas o shell da aplicação e as fontes. **Nenhuma resposta
-autenticada é cacheada** — feedback de cuidado e conversas de supervisão nunca
-ficam gravados no dispositivo pelo service worker. Offline, a aplicação mostra
-um aviso e bloqueia gravações em vez de enfileirar dados sensíveis em silêncio.
+- **Android/Chrome** — abra o site e use *Instalar app* (ou o menu ⋮ → *Adicionar à tela inicial*).
+- **iPhone/Safari** — toque em **Compartilhar** → **Adicionar à Tela de Início**.
+
+Os ícones ficam em `public/icons/`, gerados por `node scripts/generate-icons.mjs`, e
+podem ser trocados pela identidade definitiva do GC.
+
+O cache guarda apenas o esqueleto da aplicação e as fontes. **Nenhuma resposta
+autenticada é cacheada** — cuidado, feedback e conversa de supervisão nunca ficam
+gravados no aparelho. Offline, a aplicação avisa e bloqueia gravações em vez de
+enfileirar dados sensíveis em silêncio.
+
+Para testar a instalação antes do deploy, `npm run preview` serve o build de
+verdade em <http://localhost:4173>: como é localhost, o navegador aceita PWA e
+push sem HTTPS.
+
+### Notificações push
+
+Tudo o que avisa alguém já passa por um funil único no banco (`app.notify`, que
+grava em `notifications`). O push escuta **esse mesmo funil**: um gatilho publica
+o aviso em `pg_notify` e o serviço, que mantém um `LISTEN` aberto, entrega no
+aparelho. Não existe uma segunda regra de "quando avisar".
+
+Se o serviço estiver fora do ar, o aviso interno continua gravado — o push é um
+empurrão, nunca a fonte.
+
+**O que aparece na tela de bloqueio.** Só o título, nunca o corpo. Os corpos citam
+nomes ("A liderança atribuiu o cuidado de Fulano a você") e quem passa pelo lado vê
+a tela do celular. O título da supervisão vira um aviso genérico pelo mesmo motivo:
+ele denunciaria a existência de uma conversa reservada. A regra mora no banco
+(`app.push_targets`), ao lado do dado, e o serviço de entrega só recebe bytes
+prontos — ele não tem permissão de ler `notifications`.
+
+Cada pessoa liga o aviso **por aparelho**, em *Notificações*. O endpoint pertence a
+uma pessoa só: se outra entrar no mesmo navegador e ligar o aviso, a inscrição
+anterior é descartada em vez de continuar recebendo no aparelho que não é mais dela.
+
+**Para ligar**, gere as chaves uma vez e guarde no `.env`:
+
+```bash
+npm run vapid
+```
+
+Trocar o par depois invalida todas as inscrições — cada pessoa precisaria ligar o
+aviso de novo. Sem as chaves, o app funciona inteiro; o card em *Notificações*
+simplesmente não aparece.
+
+No iPhone, o Safari só entrega push depois que a aplicação foi instalada na tela de
+início. A tela explica isso em vez de mostrar um botão que não funcionaria.
 
 ---
 
@@ -449,6 +507,7 @@ git clone git@github.com:jhonata-jackson-tech/nc-discipulos.git cuidar-gc
 cd cuidar-gc
 cp .env.example .env
 # preencha DOMAIN e gere cada segredo: openssl rand -hex 32
+# gere também as chaves de push: npm run vapid
 
 # 2. subir
 npm run deploy       # ou: docker compose build && docker compose up -d
@@ -457,6 +516,38 @@ npm run deploy       # ou: docker compose build && docker compose up -d
 O Caddy pede o certificado ao Let's Encrypt sozinho na primeira subida — o
 domínio já precisa estar resolvendo para o IP da VPS, e as portas 80 e 443
 livres.
+
+### Quando a máquina já tem um servidor web
+
+Se a VPS já atende outros sites (um Apache do cPanel, por exemplo), tomar as
+portas 80 e 443 derrubaria todos eles. Existe um modo para isso:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+```
+
+O Caddy passa a escutar apenas em `127.0.0.1:8081`, em HTTP puro, e quem termina
+o TLS é o servidor que já existe. Basta apontar o domínio para essa porta:
+
+```apache
+<VirtualHost *:443>
+  ServerName discipulos.exemplo.com.br
+  SSLEngine on
+  # ... certificado do próprio painel ...
+
+  ProxyPreserveHost On
+  RequestHeader set X-Forwarded-Proto "https"
+  ProxyPass        / http://127.0.0.1:8081/
+  ProxyPassReverse / http://127.0.0.1:8081/
+</VirtualHost>
+```
+
+Nada do Cuidar GC fica exposto direto na internet — nem o banco, nem a API, nem
+o próprio Caddy.
+
+> Neste modo a API recebe `TRUST_PROXY_HOPS=2`, porque há duas camadas até ela.
+> Sem isso, `req.ip` seria o IP do proxy e o freio de tentativas de senha valeria
+> para todo mundo junto em vez de por pessoa.
 
 O `migrate` roda antes da API e do PostgREST subirem: migrations novas entram
 sozinhas no deploy, e o seed dos 33 integrantes só é aplicado se o banco estiver
@@ -511,6 +602,7 @@ src/
     common/       peças compartilhadas (estados, badges, pessoa, indicadores)
     layout/       shell, guardas de rota e avisos globais
   lib/            datas, rótulos em pt-BR, erros, sessão e cliente de dados
+  sw.ts           service worker: cache do esqueleto e notificações push
   types/          tipos do banco
 server/           serviço de sessão e geração da semana (Express + pg)
 db/
@@ -525,7 +617,10 @@ scripts/
   lib/local.mjs   sessão e cliente de dados para scripts e testes
   migrate.sh      aplica migrations e seed no container `migrate`
   deploy.sh       publica na VPS
-docker-compose.yml  · Caddyfile · web.Dockerfile · server/Dockerfile
+  cadastrar.mjs   cadastra um integrante e devolve o link de convite
+  gerar-vapid.mjs chaves das notificações push
+docker-compose.yml  · .dev.yml (local) · .proxy.yml (atrás de outro servidor)
+Caddyfile · web.Dockerfile · server/Dockerfile
 ```
 
 ---
@@ -583,8 +678,6 @@ de tela ouve "Senha", não "Senha asterisco".
 
 ## Pendências
 
-- **Notificações push** — o schema, a central interna e o service worker já
-  existem; falta registrar as chaves VAPID e assinar os dispositivos.
 - **Monitoramento** — hoje um erro inesperado morre no `console.error` do
   `ErrorBoundary`. Vale plugar um coletor de erros antes de abrir para o grupo.
 - **Backup automático** — o comando existe e está documentado; falta agendar e

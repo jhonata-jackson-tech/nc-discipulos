@@ -31,4 +31,33 @@ export const config = {
   refreshTokenTtlDays: number('REFRESH_TOKEN_TTL_DAYS', 30),
   /** Vazio em producao: a aplicacao e servida na mesma origem pelo Caddy. */
   corsOrigin: process.env.CORS_ORIGIN ?? '',
+
+  /**
+   * Quantos proxies existem entre a pessoa e este servico. Com Caddy sozinho e
+   * 1; atras de um Apache que ja atende o servidor, sao 2. Errar aqui nao da
+   * erro visivel - so faz `req.ip` virar o IP do proxy, e o freio de
+   * tentativas de senha passa a valer para todo mundo junto.
+   */
+  trustProxyHops: number('TRUST_PROXY_HOPS', 1),
+
+  /**
+   * Chaves do Web Push. Sao opcionais: sem elas o app funciona inteiro, apenas
+   * sem aviso fora da tela. Gere com `npm run vapid`.
+   */
+  vapid: vapidKeys(),
+}
+
+function vapidKeys() {
+  const publicKey = process.env.VAPID_PUBLIC_KEY
+  const privateKey = process.env.VAPID_PRIVATE_KEY
+  if (!publicKey || !privateKey) return null
+
+  // O `subject` identifica quem envia, para o servico de push do fabricante
+  // saber a quem reclamar. Precisa ser um mailto: ou uma URL.
+  const subject = process.env.VAPID_SUBJECT ?? ''
+  if (!subject.startsWith('mailto:') && !subject.startsWith('https://')) {
+    throw new Error('VAPID_SUBJECT precisa ser um mailto: ou uma URL https://')
+  }
+
+  return { publicKey, privateKey, subject }
 }

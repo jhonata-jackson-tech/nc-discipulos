@@ -1,0 +1,25 @@
+# =============================================================================
+# Sobreposicao para quem ja tem um servidor web na maquina.
+#
+# Em uma VPS dedicada, o Caddy fica com as portas 80 e 443 e cuida do HTTPS
+# sozinho. Quando o servidor ja atende outros sites (um Apache do cPanel, por
+# exemplo), tomar essas portas derrubaria todos eles.
+#
+# Aqui o Caddy escuta so em 127.0.0.1:8081, em HTTP puro, e quem termina o TLS
+# e o servidor que ja existe - basta apontar um proxy do dominio para essa
+# porta. Nada do Cuidar GC fica exposto direto na internet.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+# =============================================================================
+services:
+  web:
+    environment:
+      # Sem nome de dominio, o Caddy nao pede certificado: serve HTTP na porta.
+      DOMAIN: ':8081'
+    ports: !override
+      - '127.0.0.1:8081:8081'
+
+  api:
+    environment:
+      # Duas camadas ate aqui: o servidor da maquina e o Caddy.
+      TRUST_PROXY_HOPS: '2'

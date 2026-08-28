@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, CheckCheck } from 'lucide-react'
 import { useMarkNotificationsRead, useNotifications } from './use-notifications'
+import { PushCard } from './push-card'
 import { formatDateTime } from '@/lib/date'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/common/page-header'
@@ -43,6 +44,8 @@ export function NotificationsPage() {
           ) : undefined
         }
       />
+
+      <PushCard />
 
       {notifications.isLoading && <CardListSkeleton rows={4} />}
       {notifications.isError && (

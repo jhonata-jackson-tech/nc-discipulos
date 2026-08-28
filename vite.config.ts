@@ -4,6 +4,19 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Em desenvolvimento o Vite faz o papel do Caddy: a aplicacao continua falando
+// com `/rest/v1`, `/auth` e `/api` na propria origem, e cada um desses caminhos
+// vai para o container certo do `docker compose`.
+const proxy = {
+  '/rest/v1': {
+    target: 'http://localhost:3002',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/rest\/v1/, ''),
+  },
+  '/auth': 'http://localhost:3001',
+  '/api': 'http://localhost:3001',
+}
+
 export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
@@ -12,6 +25,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // `injectManifest` em vez do service worker gerado: precisamos de codigo
+      // proprio dentro dele para receber as notificacoes push.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
@@ -30,52 +48,18 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          {
-            src: '/icons/icon-maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        navigateFallback: '/index.html',
-        // Nunca interceptar chamadas autenticadas: dados de cuidado e feedback
-        // sensivel jamais podem ficar em cache persistente do service worker.
-        navigateFallbackDenylist: [/^\/auth\//, /^\/rest\//, /^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }: { url: URL }) => url.origin === 'https://fonts.googleapis.com',
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-stylesheets' },
-          },
-          {
-            urlPattern: ({ url }: { url: URL }) => url.origin === 'https://fonts.gstatic.com',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
       },
       devOptions: { enabled: false },
     }),
   ],
-  // Em desenvolvimento o Vite faz o papel do Caddy: a aplicacao continua
-  // falando com `/rest/v1`, `/auth` e `/api` na propria origem, e cada um
-  // desses caminhos vai para o container certo do `docker compose`.
-  server: {
-    port: 5173,
-    proxy: {
-      '/rest/v1': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (path: string) => path.replace(/^\/rest\/v1/, ''),
-      },
-      '/auth': 'http://localhost:3001',
-      '/api': 'http://localhost:3001',
-    },
-  },
+  server: { port: 5173, proxy },
+  // `npm run preview` serve o build de verdade, com service worker ativo.
+  // Como e localhost, o navegador aceita PWA e push - da para instalar e
+  // testar o aviso sem esperar o deploy.
+  preview: { port: 4173, proxy },
 })

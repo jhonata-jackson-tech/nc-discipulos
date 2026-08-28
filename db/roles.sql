@@ -33,3 +33,9 @@ grant usage on schema auth, extensions to auth_service;
 grant select, insert, update on auth.users to auth_service;
 grant select, insert, update on auth.refresh_tokens to auth_service;
 grant execute on function extensions.crypt(text, text), extensions.gen_salt(text, integer) to auth_service;
+
+-- Entrega das notificacoes push. Sao duas funcoes estreitas de proposito: o
+-- servico nunca ganha leitura sobre `notifications` nem sobre a lista de
+-- aparelhos - recebe o texto ja filtrado e devolve se entregou.
+grant usage on schema app to auth_service;
+grant execute on function app.push_targets(uuid), app.push_result(uuid, boolean) to auth_service;

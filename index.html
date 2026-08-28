@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="description" content="Cuidar GC - gestao do cuidado semanal do Grupo de Crescimento." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Cuidar GC" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Cuidar GC</title>
+  </head>
+  <body>
+    <script>
+      // Roda antes do React: le a escolha guardada e aplica a classe do tema
+      // ainda no primeiro paint, evitando o flash de tela clara.
+      ;(function () {
+        try {
+          var escolha = localStorage.getItem('cuidar-gc-tema') || 'system'
+          var escuro =
+            escolha === 'dark' ||
+            (escolha === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', escuro)
+          if (escuro) {
+            document
+              .querySelector('meta[name="theme-color"]')
+              .setAttribute('content', '#2f3a3a')
+          }
+        } catch (e) {
+          // Sem armazenamento: fica no tema claro.
+        }
+      })()
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

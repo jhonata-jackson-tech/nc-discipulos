@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { nameOf, resetCareState, signIn, state } from './support'
 
-test.skip(!state.ready, 'Supabase de teste não configurado.')
+test.skip(!state.ready, 'Ambiente de teste não configurado.')
 
 // Cada teste comeca do mesmo cenario, independente do que o anterior fez.
 test.beforeEach(async () => {

@@ -3,7 +3,7 @@
 -- =============================================================================
 
 -- Reune tudo o que o algoritmo precisa em uma unica leitura autorizada.
--- A funcao e chamada pela Edge Function `generate-week`, com o token do lider.
+-- A funcao e chamada pelo servico de geracao, com o token do lider.
 create or replace function public.get_distribution_input(p_group_id uuid, p_starts_on date)
 returns jsonb
 language plpgsql

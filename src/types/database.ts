@@ -1,9 +1,9 @@
 /**
  * Tipos do banco.
  *
- * Escritos a mao para o app nascer tipado sem depender de um projeto Supabase
- * ativo. Depois de rodar as migrations, `npm run gen:types` regenera este
- * arquivo a partir do schema real.
+ * Escritos a mao para o app nascer tipado sem depender de um banco no ar.
+ * Sao a fonte de verdade dos tipos do frontend: ao mudar o schema, ajuste
+ * este arquivo junto com a migration.
  */
 export type AppRole = 'supervisor' | 'leader' | 'disciple' | 'member'
 export type CareGender = 'male' | 'female'

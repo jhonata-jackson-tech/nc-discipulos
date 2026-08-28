@@ -115,7 +115,7 @@ end;
 $$;
 
 -- Primeiro acesso absoluto do sistema. Só funciona enquanto nenhuma conta
--- estiver vinculada; deve ser executada no SQL Editor do Supabase.
+-- estiver vinculada; deve ser executada com psql, direto no banco.
 create or replace function public.create_bootstrap_invite(p_full_name text, p_email text)
 returns table (invite_id uuid, token text, expires_at timestamptz)
 language plpgsql

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { signIn, state } from './support'
 
-test.skip(!state.ready, 'Supabase de teste não configurado.')
+test.skip(!state.ready, 'Ambiente de teste não configurado.')
 
 const ROTAS = [
   { path: '/', nome: 'Minha semana' },

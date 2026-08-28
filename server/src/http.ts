@@ -74,27 +74,47 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
 }
 
 /**
- * Freio simples de tentativas, em memoria. O GC tem dezenas de pessoas em um
+ * Freio de tentativas de senha, em memoria. O GC tem dezenas de pessoas em um
  * unico processo: uma tabela no banco seria precisao sem ganho.
+ *
+ * Conta apenas o que **falhou**. O limite existe para travar quem tenta
+ * adivinhar senha; acertar a propria senha varias vezes - trocar de aparelho,
+ * reinstalar a PWA - nao pode aproximar ninguem de ficar trancado para fora.
  */
 export function rateLimiter(limit: number, windowMs: number) {
   const hits = new Map<string, { count: number; resetAt: number }>()
 
-  return (key: string) => {
-    const now = Date.now()
-    const current = hits.get(key)
+  const limpar = (now: number) => {
+    if (hits.size <= 5_000) return
+    for (const [key, hit] of hits) if (hit.resetAt <= now) hits.delete(key)
+  }
 
-    if (!current || current.resetAt <= now) {
-      hits.set(key, { count: 1, resetAt: now + windowMs })
-      if (hits.size > 5_000) {
-        for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k)
+  return {
+    /** Antes de tentar: recusa quem ja estourou a janela. */
+    check(key: string) {
+      const current = hits.get(key)
+      if (current && current.resetAt > Date.now() && current.count >= limit) {
+        throw new HttpError(429, 'Muitas tentativas seguidas. Aguarde alguns minutos.')
       }
-      return
-    }
+    },
 
-    current.count += 1
-    if (current.count > limit) {
-      throw new HttpError(429, 'Muitas tentativas seguidas. Aguarde alguns minutos.')
-    }
+    /** Depois de errar. */
+    fail(key: string) {
+      const now = Date.now()
+      const current = hits.get(key)
+
+      if (!current || current.resetAt <= now) {
+        hits.set(key, { count: 1, resetAt: now + windowMs })
+        limpar(now)
+        return
+      }
+
+      current.count += 1
+    },
+
+    /** Depois de acertar: a contagem zera. */
+    reset(key: string) {
+      hits.delete(key)
+    },
   }
 }

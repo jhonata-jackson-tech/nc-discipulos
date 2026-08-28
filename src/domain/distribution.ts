@@ -7,12 +7,12 @@
  * nunca por uma media global do grupo.
  *
  * O modulo e puro e deterministico: a mesma entrada e a mesma semente produzem
- * sempre o mesmo resultado. Ele roda na Edge Function `generate-week`, jamais
+ * sempre o mesmo resultado. Ele roda no servidor (`server/`), jamais
  * no navegador.
  */
 
-// A extensao explicita e proposital: o mesmo arquivo e carregado pelo Deno na
-// Edge Function, que exige o caminho completo.
+// A extensao explicita e proposital: este modulo e compartilhado com o
+// servidor, que o empacota sem passar pelo resolvedor do Vite.
 import { MinCostFlow } from './min-cost-flow.ts'
 
 export type CareGender = 'male' | 'female'

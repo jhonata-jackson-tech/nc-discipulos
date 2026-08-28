@@ -11,7 +11,7 @@ import { asyncRoute, HttpError, rateLimiter, requireSession, type AuthedRequest 
 
 export const authRouter = Router()
 
-/** Tentativas de senha por e-mail e por IP: 10 a cada 15 minutos. */
+/** Tentativas **erradas** de senha, por e-mail e por IP: 10 a cada 15 minutos. */
 const loginLimit = rateLimiter(10, 15 * 60_000)
 
 interface Credentials {
@@ -37,7 +37,8 @@ authRouter.post(
   '/login',
   asyncRoute(async (req, res) => {
     const { email, password } = readCredentials(req.body ?? {})
-    loginLimit(`${req.ip}:${email}`)
+    const chave = `${req.ip}:${email}`
+    loginLimit.check(chave)
 
     // A comparacao acontece no banco, pelo pgcrypto: a senha em claro nunca e
     // guardada nem comparada em memoria do Node.
@@ -49,9 +50,11 @@ authRouter.post(
     )
 
     if (rows.length === 0) {
+      loginLimit.fail(chave)
       throw new HttpError(401, 'E-mail ou senha incorretos.')
     }
 
+    loginLimit.reset(chave)
     res.json(sessionPayload(await issueSession(rows[0]!)))
   }),
 )
@@ -120,7 +123,9 @@ authRouter.post(
 
     if (next.length < 8)
       throw new HttpError(422, 'A nova senha precisa ter pelo menos 8 caracteres.')
-    loginLimit(`senha:${userId}`)
+
+    const chave = `senha:${userId}`
+    loginLimit.check(chave)
 
     const { rowCount } = await pool.query(
       `update auth.users
@@ -131,7 +136,12 @@ authRouter.post(
       [userId, next, current],
     )
 
-    if (rowCount === 0) throw new HttpError(403, 'Senha atual incorreta.')
+    if (rowCount === 0) {
+      loginLimit.fail(chave)
+      throw new HttpError(403, 'Senha atual incorreta.')
+    }
+
+    loginLimit.reset(chave)
 
     // Trocar a senha derruba as outras sessoes: e o que da sentido a troca.
     await revokeAllForUser(userId)

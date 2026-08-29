@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { db } from '@/lib/db'
+import { friendlyError } from '@/lib/errors'
 import { useSession } from '@/features/auth/session-context'
 import { byName } from '@/lib/utils'
 import type {
@@ -129,6 +130,32 @@ export function useUpdateMember() {
       queryClient.invalidateQueries({ queryKey: ['session-profile'] })
       toast.success('Dados atualizados.')
     },
+  })
+}
+
+/**
+ * Conceder ou tirar a marca de administrador.
+ *
+ * Passa por funcao de servidor de proposito: um gatilho recusa a alteracao
+ * feita direto na tabela, senao qualquer pessoa - que ja pode editar a propria
+ * linha - viraria administradora com uma chamada de API.
+ */
+export function useSetAdmin() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ profileId, admin }: { profileId: string; admin: boolean }) => {
+      const { error } = await db.rpc('definir_admin', {
+        p_profile: profileId,
+        p_admin: admin,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_data, { admin }) => {
+      queryClient.invalidateQueries({ queryKey: membersKey })
+      queryClient.invalidateQueries({ queryKey: ['session-profile'] })
+      toast.success(admin ? 'Agora também administra o sistema.' : 'Deixou de administrar.')
+    },
+    onError: (error) => toast.error(friendlyError(error)),
   })
 }
 

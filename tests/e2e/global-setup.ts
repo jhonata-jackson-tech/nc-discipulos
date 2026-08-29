@@ -7,6 +7,7 @@ import {
   configurado,
   darAcesso,
   encerrar,
+  sql,
   removerConta,
   type LocalClient,
 } from '../../scripts/lib/local.mjs'
@@ -66,6 +67,11 @@ export default async function globalSetup() {
 
     accounts[key] = { email, password, profileId: profile.id }
   }
+
+  // No mundo dos testes, quem lidera tambem responde pelo sistema: e a marca
+  // que libera publicar devocional. Vai pela conexao direta porque um gatilho
+  // recusa a escrita da marca vinda da API - inclusive a nossa.
+  await marcarComoAdmin(accounts.leader!.profileId)
 
   // Discipulado fixo: o cuidado do discipulo pertence ao lider.
   await admin.from('discipleship_links').insert({
@@ -157,6 +163,19 @@ export default async function globalSetup() {
  * Cada execucao cria o proprio GC de teste. Limpamos os anteriores para que uma
  * semana antiga nunca seja confundida com a semana desta rodada.
  */
+/**
+ * O sinal e a escrita precisam ser da mesma transacao, e uma consulta com
+ * parametro so aceita um comando - por isso o bloco anonimo, com o
+ * identificador conferido antes de entrar nele.
+ */
+async function marcarComoAdmin(profileId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(profileId)) throw new Error('identificador inesperado')
+  await sql(`do $$ begin
+    perform set_config('app.definindo_admin', 'on', true);
+    update public.profiles set is_admin = true where id = '${profileId}';
+  end $$;`)
+}
+
 async function removePreviousRuns(admin: LocalClient) {
   const { data: leftovers } = await admin
     .from('profiles')

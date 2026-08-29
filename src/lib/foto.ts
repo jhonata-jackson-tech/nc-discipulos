@@ -16,7 +16,12 @@ const QUALIDADE = 0.75
 /** O mesmo teto que o banco exige, conferido antes de tentar salvar. */
 export const TAMANHO_MAXIMO = 120_000
 
-export async function prepararFoto(arquivo: File): Promise<string> {
+/**
+ * `lado` sobe para o retrato do autor do devocional: ele aparece a 48px no
+ * cabeçalho do texto, e 128px ficaria borrado numa tela retina. Continua sendo
+ * uma imagem pequena — o teto do banco é o mesmo.
+ */
+export async function prepararFoto(arquivo: File, lado: number = LADO): Promise<string> {
   if (!arquivo.type.startsWith('image/')) {
     throw new Error('Escolha uma imagem.')
   }
@@ -25,18 +30,18 @@ export async function prepararFoto(arquivo: File): Promise<string> {
   // tirada de lado aparece deitada.
   const imagem = await createImageBitmap(arquivo, { imageOrientation: 'from-image' })
 
-  const lado = Math.min(imagem.width, imagem.height)
-  const x = (imagem.width - lado) / 2
-  const y = (imagem.height - lado) / 2
+  const recorte = Math.min(imagem.width, imagem.height)
+  const x = (imagem.width - recorte) / 2
+  const y = (imagem.height - recorte) / 2
 
   const tela = document.createElement('canvas')
-  tela.width = LADO
-  tela.height = LADO
+  tela.width = lado
+  tela.height = lado
 
   const contexto = tela.getContext('2d')
   if (!contexto) throw new Error('Não foi possível preparar a imagem.')
 
-  contexto.drawImage(imagem, x, y, lado, lado, 0, 0, LADO, LADO)
+  contexto.drawImage(imagem, x, y, recorte, recorte, 0, 0, lado, lado)
   imagem.close()
 
   const dataUrl = tela.toDataURL('image/jpeg', QUALIDADE)

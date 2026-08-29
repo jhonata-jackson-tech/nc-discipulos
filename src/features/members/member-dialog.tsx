@@ -4,7 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { careGenderLabel, roleLabel } from '@/lib/labels'
 import type { AppRole, CareGender, Profile } from '@/types/database'
-import { useCreateMember, useUpdateMember } from './use-members'
+import { useSession } from '@/features/auth/session-context'
+import { useCreateMember, useSetAdmin, useUpdateMember } from './use-members'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/ui/field'
@@ -16,8 +17,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
 const ROLES: AppRole[] = ['leader', 'disciple', 'member', 'supervisor']
@@ -44,6 +52,8 @@ export function MemberDialog({
 }) {
   const create = useCreateMember()
   const update = useUpdateMember()
+  const definirAdmin = useSetAdmin()
+  const { isAdmin, profile } = useSession()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -180,6 +190,32 @@ export function MemberDialog({
               )}
             />
           </Field>
+
+          {/* Administrar não é um papel a mais: é uma marca sobre o papel que
+              a pessoa já tem. Só quem administra enxerga e concede - e o
+              interruptor é separado do formulário porque vale na hora, sem
+              esperar o "Salvar". */}
+          {isAdmin && member && (
+            <div className="border-border flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="min-w-0">
+                <Label htmlFor="is-admin" className="cursor-pointer">
+                  Administra o sistema
+                </Label>
+                <p className="text-muted-foreground text-xs text-pretty">
+                  Publica devocionais — um aviso que chega em dezenas de celulares — e concede esta
+                  mesma marca a outra pessoa.
+                </p>
+              </div>
+              <Switch
+                id="is-admin"
+                checked={member.is_admin}
+                disabled={member.id === profile?.id || definirAdmin.isPending}
+                onCheckedChange={(marcado) =>
+                  definirAdmin.mutate({ profileId: member.id, admin: marcado })
+                }
+              />
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

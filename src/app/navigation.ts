@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  BookOpen,
   CalendarRange,
   HeartHandshake,
   House,
@@ -55,6 +56,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['supervisor', 'leader', 'disciple', 'member'],
     primary: true,
     description: 'Talk, lanche, dinâmica e aniversariantes',
+  },
+  {
+    to: '/devocionais',
+    label: 'Devocionais',
+    icon: BookOpen,
+    roles: ['supervisor', 'leader', 'disciple', 'member'],
+    description: 'O que a liderança da igreja tem mandado',
   },
   {
     to: '/distribuicao',

@@ -20,6 +20,7 @@ function profile(overrides: Partial<Profile> = {}): Profile {
     care_gender_confirmed_at: null,
     role: 'member',
     status: 'active',
+    is_admin: false,
     deleted_at: null,
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',

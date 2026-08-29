@@ -71,5 +71,17 @@ begin
     from public.profiles p
    where p.deleted_at is null
   on conflict (group_id, profile_id) do update set role = excluded.role;
+
+  -- Quem responde pelo sistema. Nao e um papel a mais: e a marca que permite
+  -- publicar um devocional - um aviso que chega em 33 celulares e nao volta
+  -- atras. Alguem precisa ser o primeiro, porque a marca so pode ser
+  -- concedida por quem ja a tem.
+  -- O sinal e o mesmo que `public.definir_admin` usa: a marca nao muda por
+  -- escrita direta na tabela, nem aqui.
+  perform set_config('app.definindo_admin', 'on', true);
+  update public.profiles
+     set is_admin = true
+   where full_name = 'Jhonata Jackson' and role = 'leader' and deleted_at is null;
+  perform set_config('app.definindo_admin', 'off', true);
 end;
 $$;

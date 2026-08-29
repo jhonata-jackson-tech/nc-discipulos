@@ -160,6 +160,31 @@ begin
   exception when unique_violation then falhou := true; end;
   if not falhou then raise exception 'FALHA: aceitou dois pedidos pendentes na mesma atribuicao'; end if;
 
-  raise notice 'regras do banco: 10 verificacoes passaram';
+  -- 11. a marca de administrador nao se concede sozinha ----------------------
+  -- `profiles_update_self` deixa qualquer pessoa alterar a propria linha, e
+  -- `profiles_update_leader` deixa um lider alterar a de qualquer um. Sem a
+  -- trava, uma chamada direta a tabela - pela API, sem passar por tela
+  -- nenhuma - bastaria para alguem virar administrador.
+  falhou := false;
+  begin
+    update public.profiles set is_admin = true where id = disc_m;
+  exception when others then falhou := true; end;
+  if not falhou then raise exception 'FALHA: a marca de administrador mudou por escrita direta'; end if;
+
+  falhou := false;
+  begin
+    insert into public.profiles (full_name, role, is_admin)
+    values ('Atalho pelo cadastro', 'member', true);
+  exception when others then falhou := true; end;
+  if not falhou then raise exception 'FALHA: cadastrou um integrante ja administrador'; end if;
+
+  perform set_config('app.definindo_admin', 'on', true);
+  update public.profiles set is_admin = true where id = disc_m;
+  perform set_config('app.definindo_admin', 'off', true);
+  if not (select is_admin from public.profiles where id = disc_m) then
+    raise exception 'FALHA: definir_admin nao conseguiu conceder a marca';
+  end if;
+
+  raise notice 'regras do banco: 11 verificacoes passaram';
 end;
 $$;

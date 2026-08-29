@@ -12,11 +12,7 @@ export type Salutation = 'irmao' | 'irma'
 
 export type CareWeekStatus = 'draft' | 'published' | 'closed'
 export type AssignmentStatus =
-  | 'pending'
-  | 'contacted'
-  | 'awaiting_reply'
-  | 'follow_up'
-  | 'needs_attention'
+  'pending' | 'contacted' | 'awaiting_reply' | 'follow_up' | 'needs_attention'
 export type AssignmentOrigin = 'fixed_disciple' | 'rotation' | 'manual' | 'transfer'
 export type AttentionLevel = 'normal' | 'watch' | 'leader_action'
 
@@ -28,12 +24,7 @@ export type AttentionLevel = 'normal' | 'watch' | 'leader_action'
  * repetido é justamente o que a liderança precisa enxergar cedo.
  */
 export type WellBeing =
-  | 'sem_resposta'
-  | 'precisa_ajuda'
-  | 'pra_baixo'
-  | 'seguindo'
-  | 'bem'
-  | 'muito_bem'
+  'sem_resposta' | 'precisa_ajuda' | 'pra_baixo' | 'seguindo' | 'bem' | 'muito_bem'
 
 export type GcIntent = 'vem' | 'nao_vem' | 'nao_sabe'
 export type ContactChannel = 'whatsapp' | 'call' | 'in_person' | 'message' | 'video' | 'other'
@@ -55,6 +46,7 @@ export type SupervisionStatus = 'requested' | 'seen' | 'scheduled' | 'done' | 'c
 export type SupervisionUrgency = 'low' | 'normal' | 'high'
 
 export type NotificationType =
+  | 'devotional'
   | 'week_published'
   | 'assignment_new'
   | 'activity_assigned'
@@ -80,6 +72,12 @@ export interface Profile {
   care_gender_confirmed_at: string | null
   role: AppRole
   status: MemberStatus
+  /**
+   * Responde pelo sistema: publica devocional e concede a marca a outra
+   * pessoa. Não é um papel - é uma marca sobre o papel que a pessoa já tem,
+   * porque nem todo líder manda aviso para 33 celulares.
+   */
+  is_admin: boolean
   deleted_at: string | null
   created_at: string
   updated_at: string
@@ -129,7 +127,12 @@ export interface PoolReportRow {
   baseLoad: number
   extraSlotCount: number
   loads: { caregiverId: string; fullName: string; fixed: number; rotation: number; total: number }[]
-  repeatedPairs: { caregiverId: string; caredForId: string; timesUsed: number; lastUsedOn: string | null }[]
+  repeatedPairs: {
+    caregiverId: string
+    caredForId: string
+    timesUsed: number
+    lastUsedOn: string | null
+  }[]
   unassigned: string[]
   warnings: string[]
 }
@@ -264,7 +267,6 @@ export interface WeekSummary {
   }[]
 }
 
-
 /** Números do próprio esforço, para a tela de perfil. Nunca um ranking. */
 export interface MeuPerfil {
   grupo: { nome: string | null; lideres: string[] }
@@ -274,4 +276,42 @@ export interface MeuPerfil {
     pessoasCuidadas: number
     semanasSeguidas: number
   }
+}
+
+/**
+ * Quem assina um devocional.
+ *
+ * Não é um integrante do GC: o pastor não está no cadastro, e não deveria
+ * precisar estar para o texto dele aparecer aqui.
+ */
+export interface DevotionalAuthor {
+  id: string
+  name: string
+  title: string | null
+  photo_url: string | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** Quem alcança um devocional. Escolhido a cada publicação. */
+export type DevotionalAudience = 'todos' | 'lideranca_discipulos' | 'lideranca'
+export type DevotionalStatus = 'draft' | 'published'
+
+/** O que a lista mostra. Sem o corpo e sem o retrato - os dois pesam. */
+export interface DevotionalCard {
+  id: string
+  titulo: string
+  resumo: string
+  alcance: DevotionalAudience
+  situacao: DevotionalStatus
+  publicadoEm: string | null
+  autorId: string
+  assinatura: string
+  amens: number
+  euAmem: boolean
+}
+
+export interface Devotional extends Omit<DevotionalCard, 'resumo'> {
+  corpo: string
 }

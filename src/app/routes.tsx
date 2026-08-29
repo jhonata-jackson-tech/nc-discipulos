@@ -24,6 +24,12 @@ const DistributionPage = lazy(() =>
 const WeeksPage = lazy(() =>
   import('@/features/distribution/weeks-page').then((m) => ({ default: m.WeeksPage })),
 )
+const DevotionalsPage = lazy(() =>
+  import('@/features/devotionals/devotionals-page').then((m) => ({ default: m.DevotionalsPage })),
+)
+const DevotionalPage = lazy(() =>
+  import('@/features/devotionals/devotional-page').then((m) => ({ default: m.DevotionalPage })),
+)
 const ActivitiesPage = lazy(() =>
   import('@/features/activities/activities-page').then((m) => ({ default: m.ActivitiesPage })),
 )
@@ -107,6 +113,10 @@ export const router = createBrowserRouter([
                   // continua guardado, por aba, dentro da tela.
                   { path: '/configuracoes', element: <SettingsPage /> },
                   { path: '/atividades', element: <ActivitiesPage /> },
+                  // Sem guarda de papel: quem alcança cada devocional é
+                  // decidido no banco, pelo alcance escolhido na publicação.
+                  { path: '/devocionais', element: <DevotionalsPage /> },
+                  { path: '/devocionais/:id', element: <DevotionalPage /> },
                   {
                     element: <RequireRole roles={['leader', 'supervisor', 'disciple']} />,
                     children: [

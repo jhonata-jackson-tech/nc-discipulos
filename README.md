@@ -32,23 +32,24 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 
 ## O que já está implementado
 
-| Área | Situação |
-| --- | --- |
-| Autenticação por convite, login e primeiro acesso | ✅ |
-| Troca de senha pelo próprio integrante | ✅ |
-| Papéis, integrantes, discipulado e restrições de rodízio | ✅ |
-| Geração da semana no servidor, revisão, reorganização e publicação | ✅ |
-| Minha semana, registro de contato, feedback e níveis de atenção | ✅ |
-| Transferência com aceite e reorganização auditada do líder | ✅ |
-| Atividades com múltiplos responsáveis e recorrência | ✅ |
-| Supervisão reservada e anotações privadas | ✅ |
-| Relatórios com séries semana a semana e mapa de constância | ✅ |
-| Perfil (só ver) separado de Configurações (alterar) | ✅ |
-| Notificações internas | ✅ |
-| PWA instalável com cache do shell | ✅ |
-| Notificações push (fora do app) | ✅ |
-| Tema claro, escuro e "seguir o sistema" | ✅ |
-| Testes unitários, de regras no banco, de RLS e end-to-end | ✅ |
+| Área                                                               | Situação |
+| ------------------------------------------------------------------ | -------- |
+| Autenticação por convite, login e primeiro acesso                  | ✅       |
+| Troca de senha pelo próprio integrante                             | ✅       |
+| Papéis, integrantes, discipulado e restrições de rodízio           | ✅       |
+| Geração da semana no servidor, revisão, reorganização e publicação | ✅       |
+| Minha semana, registro de contato, feedback e níveis de atenção    | ✅       |
+| Transferência com aceite e reorganização auditada do líder         | ✅       |
+| Atividades com múltiplos responsáveis e recorrência                | ✅       |
+| Supervisão reservada e anotações privadas                          | ✅       |
+| Devocionais com push, leitura e “Amém”                             | ✅       |
+| Relatórios com séries semana a semana e mapa de constância         | ✅       |
+| Perfil (só ver) separado de Configurações (alterar)                | ✅       |
+| Notificações internas                                              | ✅       |
+| PWA instalável com cache do shell                                  | ✅       |
+| Notificações push (fora do app)                                    | ✅       |
+| Tema claro, escuro e "seguir o sistema"                            | ✅       |
+| Testes unitários, de regras no banco, de RLS e end-to-end          | ✅       |
 
 Não há recuperação de senha automática — é uma decisão, e está explicada em
 [Senhas](#senhas).
@@ -99,12 +100,12 @@ navegador ──HTTPS──▶ caddy ──┬── /            → a PWA (arq
                                                         postgres
 ```
 
-| Serviço | Papel |
-| --- | --- |
-| `postgres` | O banco. Schema, regras de negócio e **toda** a decisão de acesso (RLS) |
-| `postgrest` | Publica o schema `public` como API REST. Valida o JWT e assume o papel `authenticated` |
-| `api` | O que o PostgREST não faz: emitir a sessão (login, convite, troca de senha) e rodar a geração da semana |
-| `caddy` | HTTPS automático, fallback de SPA e roteamento por caminho |
+| Serviço     | Papel                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| `postgres`  | O banco. Schema, regras de negócio e **toda** a decisão de acesso (RLS)                                 |
+| `postgrest` | Publica o schema `public` como API REST. Valida o JWT e assume o papel `authenticated`                  |
+| `api`       | O que o PostgREST não faz: emitir a sessão (login, convite, troca de senha) e rodar a geração da semana |
+| `caddy`     | HTTPS automático, fallback de SPA e roteamento por caminho                                              |
 
 A peça que amarra tudo é o JWT: a `api` assina, o `postgrest` confere com o
 mesmo segredo, e `auth.uid()` lê o `sub` dentro do banco. É por isso que as
@@ -173,15 +174,15 @@ docker compose exec db psql -U postgres -d cuidar
 
 Um arquivo só, `.env`, lido pelo `docker compose`. Não vai para o Git.
 
-| Variável | Onde | Descrição |
-| --- | --- | --- |
-| `DOMAIN` | Caddy | Domínio da aplicação; é com ele que o certificado é emitido |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | banco | Credenciais do Postgres |
-| `AUTHENTICATOR_PASSWORD` | PostgREST | Senha do papel de conexão do PostgREST |
-| `AUTH_SERVICE_PASSWORD` | API | Senha do papel de conexão do serviço de sessão |
-| `JWT_SECRET` | API + PostgREST | Assina e confere a sessão. Trocar derruba todas as sessões abertas |
-| `DATABASE_URL` | scripts e testes | Conexão direta, só na sua máquina |
-| `E2E_BASE_URL` | testes | Opcional: aponta o Playwright para uma aplicação já no ar |
+| Variável                                              | Onde             | Descrição                                                          |
+| ----------------------------------------------------- | ---------------- | ------------------------------------------------------------------ |
+| `DOMAIN`                                              | Caddy            | Domínio da aplicação; é com ele que o certificado é emitido        |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | banco            | Credenciais do Postgres                                            |
+| `AUTHENTICATOR_PASSWORD`                              | PostgREST        | Senha do papel de conexão do PostgREST                             |
+| `AUTH_SERVICE_PASSWORD`                               | API              | Senha do papel de conexão do serviço de sessão                     |
+| `JWT_SECRET`                                          | API + PostgREST  | Assina e confere a sessão. Trocar derruba todas as sessões abertas |
+| `DATABASE_URL`                                        | scripts e testes | Conexão direta, só na sua máquina                                  |
+| `E2E_BASE_URL`                                        | testes           | Opcional: aponta o Playwright para uma aplicação já no ar          |
 
 O frontend **não** tem variável de ambiente: ele fala com a própria origem.
 `VITE_API_URL` existe apenas como escape, caso um dia a API responda em outro
@@ -195,18 +196,18 @@ As migrations ficam em `db/migrations/`, aplicadas em ordem alfabética pelo
 container `migrate` a cada subida. Cada uma entra uma única vez, registrada em
 `migrations.applied`, e dentro de uma transação.
 
-| Arquivo | Conteúdo |
-| --- | --- |
-| `..._auth.sql` | Schema `auth`, contas, sessões renováveis e `auth.uid()` |
-| `..._core.sql` | Enums, `groups`, `profiles`, `group_memberships`, `discipleship_links`, `member_notes` |
-| `..._care.sql` | `care_weeks`, `care_assignments`, `contact_logs`, `transfer_requests`, `pairing_restrictions` |
-| `..._activities.sql` | `activities` e `activity_assignees` |
-| `..._supervision.sql` | `supervision_requests` e `supervision_notes` |
-| `..._notifications_audit.sql` | `notifications`, `audit_logs`, `invites` |
-| `..._helpers_rls.sql` | Identidade da sessão, grants e todas as políticas de RLS |
-| `..._rpc.sql` | Convites e vínculo da conta ao integrante |
-| `..._rpc_week.sql` | Geração, publicação, contatos, transferências e reorganização |
-| `..._rpc_admin.sql` | Atividades, supervisão, integrantes e indicadores |
+| Arquivo                       | Conteúdo                                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `..._auth.sql`                | Schema `auth`, contas, sessões renováveis e `auth.uid()`                                      |
+| `..._core.sql`                | Enums, `groups`, `profiles`, `group_memberships`, `discipleship_links`, `member_notes`        |
+| `..._care.sql`                | `care_weeks`, `care_assignments`, `contact_logs`, `transfer_requests`, `pairing_restrictions` |
+| `..._activities.sql`          | `activities` e `activity_assignees`                                                           |
+| `..._supervision.sql`         | `supervision_requests` e `supervision_notes`                                                  |
+| `..._notifications_audit.sql` | `notifications`, `audit_logs`, `invites`                                                      |
+| `..._helpers_rls.sql`         | Identidade da sessão, grants e todas as políticas de RLS                                      |
+| `..._rpc.sql`                 | Convites e vínculo da conta ao integrante                                                     |
+| `..._rpc_week.sql`            | Geração, publicação, contatos, transferências e reorganização                                 |
+| `..._rpc_admin.sql`           | Atividades, supervisão, integrantes e indicadores                                             |
 
 Fora de `migrations/`, dois arquivos que dependem de ambiente e por isso não são
 migration: `db/roles.sql` (papéis de conexão, com as senhas do `.env`) e
@@ -335,9 +336,9 @@ com reputação, SPF e caixa de spam para funcionar.
 
 O que isso significa na prática:
 
-- **Convite** — o líder gera o link em *Integrantes → Convidar para o sistema*
+- **Convite** — o líder gera o link em _Integrantes → Convidar para o sistema_
   e envia por WhatsApp. O link vale 14 dias e uma única vez.
-- **Trocar a própria senha** — em *Perfil*, com a senha atual em mãos. Ao
+- **Trocar a própria senha** — em _Perfil_, com a senha atual em mãos. Ao
   salvar, as sessões abertas em outros aparelhos caem.
 - **Esqueci minha senha** — a tela de login abre um aviso pedindo para falar
   com a liderança. Não há link automático.
@@ -353,7 +354,7 @@ docker compose exec db psql -U postgres -d cuidar -c \
 ```
 
 Entregue a senha provisória pessoalmente e peça que a pessoa troque em
-*Perfil*. Nenhuma senha em claro fica gravada: o banco guarda só o hash bcrypt.
+_Perfil_. Nenhuma senha em claro fica gravada: o banco guarda só o hash bcrypt.
 
 ---
 
@@ -400,12 +401,21 @@ para com um erro de configuração claro em vez de produzir algo inválido.
 
 ## Papéis e permissões
 
-| Papel | Na interface | O que faz |
-| --- | --- | --- |
-| `supervisor` | Supervisor | Acompanha indicadores e cuidados; recebe conversas reservadas; não mexe na operação semanal |
-| `leader` | Líder | Gerencia integrantes, vínculos e atividades; gera, revisa e publica a semana; **cuida e registra contatos como qualquer discípulo** |
-| `disciple` | Discípulo | Cuida das pessoas atribuídas, registra contatos, transfere com aceite, pede conversa com a supervisão |
-| `member` | Irmão/Irmã | Vê os próprios dados, avisos e atividades. Nunca vê feedback de cuidado |
+| Papel        | Na interface | O que faz                                                                                                                           |
+| ------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `supervisor` | Supervisor   | Acompanha indicadores e cuidados; recebe conversas reservadas; não mexe na operação semanal                                         |
+| `leader`     | Líder        | Gerencia integrantes, vínculos e atividades; gera, revisa e publica a semana; **cuida e registra contatos como qualquer discípulo** |
+| `disciple`   | Discípulo    | Cuida das pessoas atribuídas, registra contatos, transfere com aceite, pede conversa com a supervisão                               |
+| `member`     | Irmão/Irmã   | Vê os próprios dados, avisos e atividades. Nunca vê feedback de cuidado                                                             |
+
+Acima dos papéis existe uma **marca**, não um quinto papel: `profiles.is_admin`.
+Ela libera publicar devocional — um aviso que chega em dezenas de celulares — e
+conceder a mesma marca a outra pessoa. Nem todo líder a tem. Um gatilho recusa
+qualquer escrita dela fora de `public.definir_admin()`, no INSERT e no UPDATE:
+`profiles_update_self` deixa qualquer pessoa alterar a própria linha, e
+`profiles_insert` deixa um líder cadastrar gente — sem a trava, uma chamada
+direta à API bastaria para alguém virar administrador. `db/tests/rules.sql`
+falha se isso regredir.
 
 O papel **nunca** vem do frontend. Toda decisão de acesso é tomada no banco, a
 partir de `auth.uid()`:
@@ -501,7 +511,7 @@ O manifest e o service worker são gerados no build.
 
 1. Abra o endereço no **Chrome**.
 2. Toque nos três pontinhos (**⋮**) no canto superior direito.
-3. Toque em **Instalar app** (ou *Adicionar à tela inicial*).
+3. Toque em **Instalar app** (ou _Adicionar à tela inicial_).
 4. Confirme em **Instalar**.
 5. Abra pelo ícone novo.
 
@@ -517,7 +527,7 @@ sistema (iOS/Android) funciona nos dois casos.
 Versão nova assume sozinha: quando o service worker troca, a página recarrega.
 Num grupo de 33 pessoas ninguém vai limpar cache.
 
-Depois de instalar, em **Notificações** ligue *Avisar neste aparelho*. No iPhone
+Depois de instalar, em **Notificações** ligue _Avisar neste aparelho_. No iPhone
 essa opção só funciona depois da instalação — é limitação do Safari, e a tela
 explica isso em vez de mostrar um botão que não funcionaria.
 
@@ -555,7 +565,7 @@ ele denunciaria a existência de uma conversa reservada. A regra mora no banco
 (`app.push_targets`), ao lado do dado, e o serviço de entrega só recebe bytes
 prontos — ele não tem permissão de ler `notifications`.
 
-Cada pessoa liga o aviso **por aparelho**, em *Notificações*. O endpoint pertence a
+Cada pessoa liga o aviso **por aparelho**, em _Notificações_. O endpoint pertence a
 uma pessoa só: se outra entrar no mesmo navegador e ligar o aviso, a inscrição
 anterior é descartada em vez de continuar recebendo no aparelho que não é mais dela.
 
@@ -566,7 +576,7 @@ npm run vapid
 ```
 
 Trocar o par depois invalida todas as inscrições — cada pessoa precisaria ligar o
-aviso de novo. Sem as chaves, o app funciona inteiro; o card em *Notificações*
+aviso de novo. Sem as chaves, o app funciona inteiro; o card em _Notificações_
 simplesmente não aparece.
 
 No iPhone, o Safari só entrega push depois que a aplicação foi instalada na tela de
@@ -599,11 +609,11 @@ livres.
 `discipulos.igrejanovoscomecos.com.br` roda na VPS da igreja — um cPanel que já
 atende outros sites. Três restrições da máquina, três modos de sobreposição:
 
-| Restrição | Modo |
-| --- | --- |
-| Apache ocupa 80/443 | `docker-compose.proxy.yml` — Caddy só em `127.0.0.1:8081` |
-| Bridge do Docker sem DNS (firewall bloqueia UDP 53) | `docker-compose.host.yml` — rede do host |
-| Kernel 3.10 recusa o Postgres em container | `docker-compose.banco-do-host.yml` — PostgreSQL 16 nativo |
+| Restrição                                           | Modo                                                      |
+| --------------------------------------------------- | --------------------------------------------------------- |
+| Apache ocupa 80/443                                 | `docker-compose.proxy.yml` — Caddy só em `127.0.0.1:8081` |
+| Bridge do Docker sem DNS (firewall bloqueia UDP 53) | `docker-compose.host.yml` — rede do host                  |
+| Kernel 3.10 recusa o Postgres em container          | `docker-compose.banco-do-host.yml` — PostgreSQL 16 nativo |
 
 ```bash
 docker compose -f docker-compose.yml \
@@ -708,7 +718,8 @@ src/
   app/            rotas, navegação por papel e cliente de dados
   domain/         algoritmo de distribuição e fluxo de custo mínimo (puros)
   features/       uma pasta por assunto: auth, week, care, distribution,
-                  activities, members, supervision, notifications, settings, setup
+                  activities, devotionals, members, supervision, notifications,
+                  settings, setup
   components/
     ui/           primitivos (botão, campo, diálogo, tabela…)
     common/       peças compartilhadas (estados, badges, pessoa, indicadores)
@@ -788,6 +799,34 @@ apenas quando a escolha é "seguir o sistema". Um script inline no `index.html`
 aplica a classe antes do primeiro paint, para não piscar branco em quem usa o
 tema escuro. Todas as cores são tokens em `src/index.css` — nenhuma cor
 literal nos componentes.
+
+**O devocional tem endereço; o WhatsApp não tem.** Todo dia o pastor manda um
+devocional no grupo de liderança, e autorizou repassar. Repassar por lá funciona
+mal: some no meio das outras mensagens, ninguém acha o de anteontem. Aqui o
+texto vira uma página com autor, data e “Amém” no fim, e chega por push —
+_“Pastor Felipe Mendes te mandou uma mensagem”_. O autor é uma entidade própria,
+com nome, título e retrato: o pastor não está no cadastro do GC, e não deveria
+precisar estar para o texto dele aparecer. Amanhã pode ser outra pessoa sem
+mexer numa linha de código.
+
+**O devocional é a única exceção ao corpo escondido.** Todo aviso que sai deste
+app tem o corpo trocado por “Toque para abrir o Discípulos” antes de chegar à
+tela de bloqueio, porque os corpos citam pessoas (“A liderança atribuiu o
+cuidado de Fulano a você”) e quem passa pelo lado vê o celular. Um devocional
+não denuncia ninguém — o título dele é justamente o que faz querer abrir.
+
+**Um “Amém”, e ninguém sabe de quem.** A reação é uma só: quatro reações
+parecidas viram escolha de emoji em vez de resposta. A contagem aparece (“Você e
+mais 22 marcaram Amém”), os nomes não — cada pessoa só enxerga o próprio na
+tabela, e o total vem de função de leitura. Um gesto de fé não é lista de
+presença.
+
+**O texto é guardado como foi escrito.** Ele chega colado do WhatsApp, com
+parágrafos separados por linha em branco e `*asteriscos*` marcando negrito.
+Guardamos exatamente isso — quem escreve não deveria precisar aprender uma
+sintaxe nova — e a leitura transforma em parágrafos. O resultado é uma
+estrutura, não HTML: a tela monta elementos do React a partir dela, e texto de
+terceiros nunca vira marcação executável.
 
 **A atividade não tem situação — tem combinado.** O campo "a fazer / em
 andamento / concluída" descrevia a atividade, e não o acerto entre duas pessoas:

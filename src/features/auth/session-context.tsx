@@ -14,6 +14,8 @@ interface SessionValue {
   isLeader: boolean
   isSupervisor: boolean
   isLeadership: boolean
+  /** Responde pelo sistema - publica devocional, concede a marca. */
+  isAdmin: boolean
   loading: boolean
   refresh: () => Promise<void>
   signOut: () => Promise<void>
@@ -99,6 +101,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       isLeader: role === 'leader',
       isSupervisor: role === 'supervisor',
       isLeadership: role === 'leader' || role === 'supervisor',
+      isAdmin: Boolean(profile?.is_admin),
       loading: Boolean(userId) && profileQuery.isLoading,
       refresh: async () => {
         await queryClient.invalidateQueries({ queryKey: ['session-profile'] })

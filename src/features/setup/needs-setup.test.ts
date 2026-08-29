@@ -20,6 +20,7 @@ function pessoa(overrides: Partial<Profile> = {}): Profile {
     care_gender_confirmed_at: null,
     role: 'member',
     status: 'active',
+    is_admin: false,
     deleted_at: null,
     created_at: '',
     updated_at: '',

@@ -6,6 +6,7 @@
  */
 import type {
   ActivityResponse,
+  DevotionalAudience,
   ActivityType,
   AppRole,
   AssignmentOrigin,
@@ -117,6 +118,18 @@ export const activityResponseLabel: Record<ActivityResponse, string> = {
   pendente: 'Aguardando resposta',
   aceita: 'Aceitou',
   recusada: 'Recusou',
+}
+
+/**
+ * Quem alcanca um devocional.
+ *
+ * O alcance e escolhido a cada publicacao porque nem todo texto que chegue
+ * aqui tera a mesma permissao de quem escreveu.
+ */
+export const devotionalAudienceLabel: Record<DevotionalAudience, string> = {
+  todos: 'Todo o GC',
+  lideranca_discipulos: 'Liderança e discípulos',
+  lideranca: 'Só a liderança',
 }
 
 export const channelLabel: Record<ContactChannel, string> = {

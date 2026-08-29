@@ -10,7 +10,15 @@
  *     --whatsapp 21999999999 --nascimento 1996-03-21 \
  *     --papel disciple \
  *     --lider "Nome do Lider" \
- *     --site https://discipulos.exemplo.com.br
+ *     --site https://discipulos.exemplo.com.br \
+ *     --senha SenhaProvisoria
+ *
+ * Com `--senha`, a conta ja nasce criada com ela e a troca obrigatoria no
+ * primeiro acesso. Sem, o retorno e o link de convite. \
+ *     --senha SenhaProvisoria
+ *
+ * Com `--senha`, a conta ja nasce criada com ela e a troca obrigatoria no
+ * primeiro acesso. Sem, o retorno e o link de convite.
  *
  * `--atual "Nome como esta no sistema"` renomeia em vez de duplicar - util
  * para completar alguem que ja veio no seed com o nome curto.
@@ -45,6 +53,12 @@ const nome = obrigatorio('nome')
 const email = obrigatorio('email').trim().toLowerCase()
 const papel = args.papel ?? 'member'
 const site = (args.site ?? process.env.SITE_URL ?? 'http://localhost:5173').replace(/\/$/, '')
+const senhaProvisoria = args.senha ?? null
+
+if (senhaProvisoria && senhaProvisoria.length < 8) {
+  console.error('A senha provisória precisa ter pelo menos 8 caracteres.')
+  process.exit(1)
+}
 
 if (!['leader', 'supervisor', 'disciple', 'member'].includes(papel)) {
   console.error(`Papel inválido: ${papel}. Use leader, supervisor, disciple ou member.`)
@@ -61,6 +75,7 @@ const resultado = await cadastrar(admin, grupo, {
   nascimento: args.nascimento,
   papel,
   site,
+  senhaProvisoria,
 })
 
 console.log(`→ ${resultado.nome}: ${resultado.acao}`)
@@ -106,6 +121,11 @@ if (args.lider) {
 
 if (resultado.link) {
   console.log(`\n✓ Link de acesso (vale 14 dias, uso único):\n  ${resultado.link}\n`)
+} else if (resultado.senha) {
+  console.log(`\n✓ Acesso criado para ${nome}`)
+  console.log(`  Endereço: ${site}`)
+  console.log(`  Senha provisória: ${resultado.senha}`)
+  console.log('  No primeiro acesso o sistema exige que ela crie a própria senha.\n')
 } else {
   console.log(`\n✓ ${nome} já tem acesso ao sistema.\n`)
 }

@@ -42,6 +42,21 @@ export function useActiveMembers() {
   return { ...query, data: query.data?.filter((p) => p.status === 'active') }
 }
 
+/**
+ * Quem executa as atividades do GC.
+ *
+ * As atividades da semana - a palavra, o lanche, a dinamica, os aniversarios -
+ * sao trabalho dos discipulos, nao do GC inteiro. Oferecer a lista completa
+ * transformava a escolha em uma cacada entre 33 nomes.
+ */
+export function useDisciples() {
+  const query = useMembers()
+  return {
+    ...query,
+    data: query.data?.filter((p) => p.status === 'active' && p.role === 'disciple'),
+  }
+}
+
 export function useDiscipleshipLinks() {
   return useQuery({
     queryKey: ['discipleship-links'],

@@ -25,7 +25,7 @@ export function AuthLayout({
           <span className="bg-brand-panel-foreground/15 flex size-10 items-center justify-center rounded-lg">
             <Marca className="size-5" />
           </span>
-          <span className="font-display text-lg font-bold">Cuidar GC</span>
+          <span className="font-display text-lg font-bold">Discípulos</span>
         </div>
 
         <div className="max-w-md space-y-4">

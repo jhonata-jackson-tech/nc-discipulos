@@ -124,10 +124,10 @@ as $$
          s.endpoint,
          s.p256dh,
          s.auth,
-         case when n.type = 'supervision_updated' then 'Cuidar GC' else n.title end,
+         case when n.type = 'supervision_updated' then 'Discípulos' else n.title end,
          case when n.type = 'supervision_updated'
               then 'Você tem um aviso novo.'
-              else 'Toque para abrir o Cuidar GC.'
+              else 'Toque para abrir o Discípulos.'
          end,
          coalesce(n.link, '/')
     from public.notifications n

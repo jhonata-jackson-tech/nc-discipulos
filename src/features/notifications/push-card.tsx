@@ -36,7 +36,7 @@ export function PushCard() {
       <Alert variant="info">
         <Share aria-hidden />
         <AlertDescription>
-          Para receber avisos no iPhone, instale o Cuidar GC na tela de início: toque em{' '}
+          Para receber avisos no iPhone, instale o Discípulos na tela de início: toque em{' '}
           <strong>Compartilhar</strong> e depois em <strong>Adicionar à Tela de Início</strong>.
         </AlertDescription>
       </Alert>

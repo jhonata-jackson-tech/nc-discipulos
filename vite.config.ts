@@ -33,9 +33,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'marca.png'],
       manifest: {
-        name: 'Cuidar GC',
-        short_name: 'Cuidar GC',
-        description: 'Gestão do cuidado semanal do Grupo de Crescimento',
+        name: 'Discípulos',
+        short_name: 'Discípulos',
+        description: 'Cuidado semanal e atividades do Grupo de Crescimento',
         lang: 'pt-BR',
         dir: 'ltr',
         start_url: '/',

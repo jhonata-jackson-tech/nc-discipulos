@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useActiveMembers } from '@/features/members/use-members'
+import { useDisciples } from '@/features/members/use-members'
 import { activityStatusLabel, activityTypeLabel } from '@/lib/labels'
 import type { ActivityStatus, ActivityType } from '@/types/database'
 import { useSaveActivity, type ActivityWithAssignees } from './use-activities'
@@ -52,7 +52,21 @@ export function ActivityDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const { data: members } = useActiveMembers()
+  const { data: disciples } = useDisciples()
+
+  /**
+   * A lista sao os discipulos - mais quem ja estava nesta atividade, ainda que
+   * hoje nao seja discipulo. Sem isso, editar o horario de uma atividade
+   * antiga apagaria em silencio um responsavel que ninguem pediu para tirar.
+   */
+  const responsaveis = React.useMemo(() => {
+    const lista = [...(disciples ?? [])]
+    const jaTem = new Set(lista.map((p) => p.id))
+    for (const entrada of activity?.assignees ?? []) {
+      if (!jaTem.has(entrada.profile.id)) lista.push(entrada.profile as (typeof lista)[number])
+    }
+    return lista
+  }, [disciples, activity])
   const save = useSaveActivity()
 
   const form = useForm<FormValues>({
@@ -167,7 +181,7 @@ export function ActivityDialog({
             <Input id="dueAt" type="datetime-local" {...form.register('dueAt')} />
           </Field>
 
-          <Field label="Responsáveis">
+          <Field label="Responsáveis" hint="As atividades ficam com os discípulos do GC.">
             <Controller
               control={form.control}
               name="assigneeIds"
@@ -175,7 +189,12 @@ export function ActivityDialog({
                 // No celular a lista flui dentro do proprio dialogo: uma area
                 // rolavel dentro de outra e dificil de operar com o dedo.
                 <div className="scrollbar-thin space-y-1 rounded-lg border p-2 sm:max-h-56 sm:overflow-y-auto">
-                  {(members ?? []).map((member) => {
+                  {responsaveis.length === 0 && (
+                    <p className="text-muted-foreground p-2 text-sm">
+                      Nenhum discípulo ativo no GC ainda.
+                    </p>
+                  )}
+                  {responsaveis.map((member) => {
                     const checked = field.value.includes(member.id)
                     return (
                       <label

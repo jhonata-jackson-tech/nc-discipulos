@@ -1,7 +1,11 @@
-# Cuidar GC
+# Discípulos
 
 Aplicação privada para organizar o cuidado semanal, as atividades e o
 acompanhamento de um Grupo de Crescimento.
+
+> O produto se chama **Discípulos** para quem usa — é o nome que aparece ao
+> instalar no celular. `cuidar-gc` continua sendo o nome técnico do repositório
+> e dos containers.
 
 Cada pessoa abre o sistema e vê, em uma tela só, o que precisa fazer naquela
 semana. A liderança acompanha o andamento sem transformar o cuidado em cobrança,
@@ -499,8 +503,9 @@ O manifest e o service worker são gerados no build.
 4. Confirme em **Instalar**.
 5. Abra pelo ícone novo.
 
-Instalado, o app trava o zoom de pinça — é o que faz parecer aplicativo, e não
-página. Na aba do navegador o zoom continua liberado, e a ampliação do próprio
+Instalado, o app trava o zoom de pinça — pelo `viewport` e também barrando os
+eventos de gesto, porque o Safari ignora `user-scalable=no` em várias situações,
+entre elas dentro de diálogos. Na aba do navegador o zoom continua liberado, e a ampliação do próprio
 sistema (iOS/Android) funciona nos dois casos.
 
 > 🪤 Os campos usam 16px no celular. Abaixo disso o Safari do iPhone dá zoom

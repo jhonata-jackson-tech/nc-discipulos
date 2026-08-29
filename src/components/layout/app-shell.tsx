@@ -52,7 +52,7 @@ export function AppShell() {
             <Marca className="size-5" />
           </span>
           <div className="leading-tight">
-            <p className="font-display text-[15px] font-bold">Cuidar GC</p>
+            <p className="font-display text-[15px] font-bold">Discípulos</p>
             <p className="text-muted-foreground text-xs">Cuidado semanal</p>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function AppShell() {
               <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
                 <Marca className="size-4" />
               </span>
-              <span className="font-display text-[15px] font-bold">Cuidar GC</span>
+              <span className="font-display text-[15px] font-bold">Discípulos</span>
             </div>
             <div className="flex items-center gap-0.5">
               <DemoRoleSwitcher compact />

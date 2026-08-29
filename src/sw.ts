@@ -59,7 +59,7 @@ interface Aviso {
  * silencio: a pessoa abre o app e ve o que aconteceu.
  */
 self.addEventListener('push', (event) => {
-  let aviso: Aviso = { title: 'Cuidar GC', body: 'Você tem um aviso novo.', link: '/' }
+  let aviso: Aviso = { title: 'Discípulos', body: 'Você tem um aviso novo.', link: '/' }
 
   try {
     if (event.data) aviso = { ...aviso, ...(event.data.json() as Partial<Aviso>) }

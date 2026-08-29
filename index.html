@@ -5,9 +5,9 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#fafafa" />
-    <meta name="description" content="Cuidar GC - gestao do cuidado semanal do Grupo de Crescimento." />
+    <meta name="description" content="Discipulos - cuidado semanal e atividades do Grupo de Crescimento." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Cuidar GC" />
+    <meta name="apple-mobile-web-app-title" content="Discípulos" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <title>Cuidar GC</title>
+    <title>Discípulos</title>
   </head>
   <body>
     <script>
@@ -48,6 +48,16 @@
                 'content',
                 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
               )
+
+            // O Safari ignora `user-scalable=no` em varias situacoes - entre
+            // elas dentro de dialogos. Estes eventos de gesto sao a unica
+            // forma de barrar a pinca de verdade no iPhone. Continua valendo
+            // so no app instalado: na aba do navegador o zoom fica livre.
+            ;['gesturestart', 'gesturechange', 'gestureend'].forEach(function (evento) {
+              document.addEventListener(evento, function (e) { e.preventDefault() }, {
+                passive: false,
+              })
+            })
           }
         } catch (e) {
           // Sem armazenamento: fica no tema claro.

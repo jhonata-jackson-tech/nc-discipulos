@@ -20,6 +20,7 @@
     "verify:generation": "node scripts/verify-generation.mjs",
     "demo": "node scripts/seed-demo.mjs",
     "demo:limpar": "node scripts/seed-demo-limpar.mjs",
+    "guia": "node scripts/gerar-guia.mjs",
     "vapid": "node scripts/gerar-vapid.mjs",
     "cadastrar": "node scripts/cadastrar.mjs",
     "cadastrar:lote": "node scripts/cadastrar-lote.mjs",

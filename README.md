@@ -56,6 +56,22 @@ Não há recuperação de senha automática — é uma decisão, e está explica
 
 ---
 
+## Guia do integrante
+
+`docs/guia-do-integrante.html` é o guia que a liderança compartilha com o GC:
+instalar no celular (Android e iPhone), primeiro acesso, troca de senha, ligar
+os avisos, o que cada tela faz e quem vê o quê.
+
+```bash
+npm run guia   # gera docs/guia-do-integrante.pdf
+```
+
+Ele mora como HTML, e não como um PDF solto, para entrar no diff quando o app
+muda de lugar — "trocar senha" já saiu do Perfil para Configurações uma vez, e
+um guia que ninguém consegue regerar envelhece calado.
+
+---
+
 ## Modo de demonstração
 
 Para avaliar o produto com o GC cheio, sem precisar preencher tudo à mão:

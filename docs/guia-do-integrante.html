@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Discípulos · Guia do integrante</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =====================================================================
+         Guia do integrante — feito para virar PDF.
+
+         Papel A4, tinta preta sobre branco: este arquivo vai parar no WhatsApp
+         de 33 pessoas e, com sorte, numa impressora da igreja. Nada de fundo
+         escuro de página inteira, e nenhuma cor que só se entenda em tela.
+         ===================================================================== */
+      @page {
+        size: A4;
+        margin: 16mm 15mm 18mm;
+      }
+
+      :root {
+        --tinta: #232323;
+        --tinta-suave: #5b5b5b;
+        --linha: #e2e2e2;
+        --realce: #f4f4f4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          'Inter',
+          -apple-system,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        font-size: 10.5pt;
+        line-height: 1.55;
+        color: var(--tinta);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family:
+          'Plus Jakarta Sans',
+          'Inter',
+          -apple-system,
+          sans-serif;
+        letter-spacing: -0.015em;
+        margin: 0;
+      }
+
+      p {
+        margin: 0 0 0.6em;
+        text-wrap: pretty;
+      }
+
+      strong {
+        font-weight: 600;
+      }
+
+      /* ------------------------------------------------------------- capa */
+      .capa {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding-bottom: 14px;
+        border-bottom: 2px solid var(--tinta);
+        margin-bottom: 22px;
+      }
+
+      .capa img {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+      }
+
+      .capa h1 {
+        font-size: 21pt;
+        line-height: 1.1;
+      }
+
+      .capa p {
+        margin: 3px 0 0;
+        color: var(--tinta-suave);
+        font-size: 10pt;
+      }
+
+      /* --------------------------------------------------------- secoes */
+      section {
+        margin-bottom: 20px;
+      }
+
+      h2 {
+        font-size: 13pt;
+        margin: 0 0 4px;
+        /* Título sozinho no fim da página é título que ninguém liga ao texto. */
+        break-after: avoid;
+      }
+
+      h2 .n {
+        display: inline-block;
+        min-width: 22px;
+        margin-right: 7px;
+        padding: 1px 6px;
+        border-radius: 5px;
+        background: var(--tinta);
+        color: #fff;
+        font-size: 10pt;
+        text-align: center;
+      }
+
+      .sub {
+        color: var(--tinta-suave);
+        margin: 0 0 10px;
+        font-size: 9.5pt;
+      }
+
+      /* ----------------------------------------------------------- passos */
+      ol.passos {
+        margin: 0;
+        padding-left: 1.15em;
+      }
+
+      ol.passos > li {
+        margin-bottom: 5px;
+        padding-left: 3px;
+        break-inside: avoid;
+      }
+
+      ul.simples {
+        margin: 0 0 0.6em;
+        padding-left: 1.1em;
+      }
+
+      ul.simples > li {
+        margin-bottom: 4px;
+        break-inside: avoid;
+      }
+
+      /* ------------------------------------------------------- dois lados */
+      .lado-a-lado {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      .caixa {
+        border: 1px solid var(--linha);
+        border-radius: 9px;
+        padding: 12px 14px;
+        break-inside: avoid;
+      }
+
+      .caixa h3 {
+        font-size: 11pt;
+        margin-bottom: 6px;
+      }
+
+      /* ---------------------------------------------------------- destaque */
+      .atencao {
+        border-left: 3px solid var(--tinta);
+        background: var(--realce);
+        padding: 9px 13px;
+        border-radius: 0 7px 7px 0;
+        margin: 10px 0 0;
+        font-size: 9.8pt;
+        break-inside: avoid;
+      }
+
+      .atencao p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* O caminho dentro do app, escrito do mesmo jeito em todo lugar. */
+      .caminho {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      /* ------------------------------------------------------------ tabela */
+      tr {
+        break-inside: avoid;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.8pt;
+      }
+
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 7px 10px 7px 0;
+        border-bottom: 1px solid var(--linha);
+      }
+
+      th {
+        font-weight: 600;
+        white-space: nowrap;
+        width: 30%;
+      }
+
+      tr:last-child td,
+      tr:last-child th {
+        border-bottom: none;
+      }
+
+      footer {
+        margin-top: 26px;
+        padding-top: 10px;
+        border-top: 1px solid var(--linha);
+        color: var(--tinta-suave);
+        font-size: 8.8pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="capa">
+      <img
+        src="data:image/png;base64,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Hw7uNuvbt68IEKfWH/mSIh+sqsEkybjGJMo85gFs4VbGQPntzjvvFAGSOMBR7VlUGe9mIICrVov2yby3peaOALbEFz8ratYVHzquMXw7KwIwXbKe10RzySZOkHeJxVwRgGylTb+fLGlRCYCoVFwjwlKUJwAgq+03Sq9FgAiZUltiiHlYRe6rjRONee+993JbCxSUffZn7tevX+9F9USAmFWfyHkXvfiMWp+oxmZQNAKQLGN6pt8YGysChAC7nt+IZxedACTDbBlTl1HpusUWWxSOAABl7iKd4XJDAKI8NnnDsgxxY0GjX2prLq9Wr8aNSDtykiYBGDbuN7rI8hoNyg0BGGDnN4SZylaLz7BrRpqS2EPbCJCYQmKEJ0UR+gFqlXvbKk+ZrSwCRPT/0f9RA0uxCOCKBp1//vkiQBBWr16d6k1pNPr37++pWqC+XIkKETHh/zkfpHno9cM2RCTJa00G2G80AIkAAdi8eXOHi1YGJWJq5t96661Qh18KyCBC2ioXaT8BbOHseqpbS08A+n5t8f8iL3xi362trc65BbVyAFyTND4XBYU20VtcUPT/e/XqVXctf+/evTu8PiXheTwI54IAp5xyirXBuqiLn54Fl8Z+WCNaRN9tkp+L16OnopbRucZUHUoxmBwT571sBY15jOjlggA22b0sU+h0n3GzcQ248eyGI0eOjOWKoE9aayp9FCMRWG90iL4Cm9sT1j799FNz2223mf322y/0e7a3t3d4nX79+okANtik+qguzKL0+sILL3TOGeApFEVwl9dzDZaoxzZs2OBVhkbdQTl422r/4xqH9oULF4Z6KrS1tRUiEtQpr2G5LIaykWWu1a7IZwv7elRUpmmUGVx//fWBMfX999/fKymfO3duqCb8OEbPL806Xbt2jRQJojtOBAgZN077cckicunex6llYff/8MMPTVYGcZEsqWgLcbCN0nvM4AsI9dxzz3mHdeqVeMow+IKnBpGrWtcHpW5X7y8E8dutt94qAthgWzhpi60GTUn3G4uh1utdcsklJs+2ceNGLw/BkxVfPkytEUJduDt041HPYytVxxYvXtxBqIywqt9mzZolAtiA6oDf0u7/tRXeuYxGD3oVgnZ/RK3yZlzXO+64w+vZdYU2+ezkWyAwh38O3TTx4ObgQgE2KA72kABBYptR74PrVQl12vqEo7iTTUUA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"
+        alt=""
+      />
+      <div>
+        <h1>Discípulos</h1>
+        <p>Guia rápido do integrante · GC Novos Começos</p>
+      </div>
+    </div>
+
+    <section>
+      <h2><span class="n">1</span>O que é o Discípulos</h2>
+      <p>
+        É o app do nosso GC. Nele você vê a sua semana, registra o cuidado com as pessoas que estão
+        com você, responde às atividades, lê os devocionais e fala reservadamente com a supervisão.
+      </p>
+      <p>
+        Ele não substitui o WhatsApp: substitui a parte que o WhatsApp faz mal — o que se perde no
+        meio das mensagens.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="n">2</span>Instalar no celular</h2>
+      <p class="sub">
+        O Discípulos não está na Play Store nem na App Store. Ele é um site que vira aplicativo — e
+        instalar leva menos de um minuto.
+      </p>
+
+      <p>Abra este endereço no navegador do celular:</p>
+      <p style="font-size: 11.5pt; font-weight: 600; margin-bottom: 12px">
+        discipulos.igrejanovoscomecos.com.br
+      </p>
+
+      <div class="lado-a-lado">
+        <div class="caixa">
+          <h3>Android</h3>
+          <ol class="passos">
+            <li>Abra o endereço no <strong>Chrome</strong>.</li>
+            <li>Toque nos <strong>três pontinhos</strong>, no canto superior direito.</li>
+            <li>Toque em <strong>Instalar aplicativo</strong> (ou “Adicionar à tela inicial”).</li>
+            <li>Confirme em <strong>Instalar</strong>.</li>
+          </ol>
+        </div>
+
+        <div class="caixa">
+          <h3>iPhone</h3>
+          <ol class="passos">
+            <li>Abra o endereço no <strong>Safari</strong> — precisa ser o Safari.</li>
+            <li>Toque no botão <strong>Compartilhar</strong> (o quadrado com a seta para cima).</li>
+            <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+            <li>Confirme em <strong>Adicionar</strong>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="atencao">
+        <p>
+          <strong>No iPhone, instalar não é opcional.</strong> Sem o ícone na tela de início, o
+          iPhone não deixa o app enviar notificação nenhuma — e é por elas que você fica sabendo da
+          semana publicada, do devocional e de quem precisa de você.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">3</span>Primeiro acesso</h2>
+      <p class="sub">
+        Não existe cadastro público. Sua conta é criada pela liderança, e você recebe o acesso de um
+        destes dois jeitos.
+      </p>
+
+      <div class="lado-a-lado">
+        <div class="caixa">
+          <h3>Recebeu um link de convite</h3>
+          <ol class="passos">
+            <li>Abra o link que a liderança te mandou.</li>
+            <li>Confira o e-mail que aparece na tela.</li>
+            <li>Crie a sua senha e repita.</li>
+            <li>Pronto — você já entra direto.</li>
+          </ol>
+        </div>
+
+        <div class="caixa">
+          <h3>Recebeu uma senha provisória</h3>
+          <ol class="passos">
+            <li>Abra o app e toque em <strong>Entrar</strong>.</li>
+            <li>Use o <strong>e-mail cadastrado</strong> e a senha que te passaram.</li>
+            <li>O app pede na hora para você criar a sua senha.</li>
+            <li>Crie, repita e pronto.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="atencao">
+        <p style="margin-bottom: 4px"><strong>A senha precisa ter:</strong></p>
+        <p style="margin-bottom: 0">pelo menos 8 caracteres · uma letra · um número</p>
+      </div>
+
+      <div class="atencao">
+        <p>
+          <strong>A senha provisória vale só uma vez.</strong> Enquanto você não criar a sua, a
+          conta não abre nada — e como essa senha é a mesma para todo mundo, troque no mesmo dia em
+          que receber.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">4</span>Entrar no dia a dia</h2>
+      <p>
+        E-mail cadastrado pela liderança + a senha que você criou. O olhinho no campo da senha
+        mostra o que você digitou, se precisar conferir.
+      </p>
+
+      <div class="atencao">
+        <p>
+          <strong>Esqueceu a senha?</strong> O app não manda e-mail de recuperação — isso é uma
+          decisão, não um esquecimento. Fale com a liderança: eles cadastram uma senha nova e
+          entregam pessoalmente. Num grupo em que todo mundo se conhece, essa conversa vale mais que
+          um link automático.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">5</span>Trocar a sua senha</h2>
+      <ol class="passos">
+        <li>
+          No celular, toque na <strong>sua foto</strong>, no canto superior direito. No computador,
+          no <strong>seu nome</strong>, no rodapé da barra lateral.
+        </li>
+        <li>Vá em <span class="caminho">Configurações → Meus dados</span>.</li>
+        <li>Role até <strong>Trocar senha</strong>: senha atual, nova, e repetir.</li>
+      </ol>
+      <div class="atencao">
+        <p>
+          Ao salvar, as sessões abertas em <strong>outros aparelhos são encerradas</strong>. É o que
+          faz a troca valer de verdade se alguém tiver entrado no seu lugar.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">6</span>Ligar os avisos no celular</h2>
+      <ol class="passos">
+        <li>Instale o app (passo 2) — no iPhone, isso é obrigatório.</li>
+        <li>
+          Toque na <strong>sua foto</strong> → <span class="caminho">Configurações → Avisos</span>.
+        </li>
+        <li>Ligue o interruptor <strong>“Avisar neste aparelho”</strong>.</li>
+        <li>Quando o celular perguntar, toque em <strong>Permitir</strong>.</li>
+      </ol>
+
+      <div class="atencao">
+        <p>
+          <strong>A escolha é por aparelho, não por conta.</strong> Se você usa o celular e o
+          computador, ligue nos dois. Ligar leva alguns segundos: o navegador precisa registrar o
+          aparelho.
+        </p>
+        <p style="margin-top: 6px">
+          <strong>Se aparecer “bloqueadas”:</strong> em algum momento você tocou em “Bloquear”. É
+          preciso liberar nas configurações do navegador para este site, e então voltar aqui.
+        </p>
+      </div>
+
+      <p style="margin-top: 10px">Você recebe aviso quando:</p>
+      <ul class="simples">
+        <li>a semana de cuidado é publicada e você tem alguém para cuidar;</li>
+        <li>a liderança te indica para uma atividade;</li>
+        <li>alguém quer transferir um cuidado para você;</li>
+        <li>a supervisão responde a você;</li>
+        <li>chega um devocional novo.</li>
+      </ul>
+      <p>
+        Fora do app, o aviso <strong>nunca mostra nomes</strong> — só “Toque para abrir”. Quem olhar
+        a tela do seu celular por cima do ombro não descobre de quem o GC está cuidando.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="n">7</span>O que você vai usar</h2>
+      <p class="sub">
+        Cada pessoa vê o que é do seu papel: quem cuida enxerga “Cuidados”, quem não cuida não
+        enxerga. Se algo desta lista não aparece para você, é porque não é da sua parte — e não
+        porque quebrou.
+      </p>
+
+      <table>
+        <tr>
+          <th>Minha semana</th>
+          <td>
+            A tela de abertura. Quem está com você nesta semana, o que já foi feito, suas atividades
+            e os aniversariantes por perto.
+          </td>
+        </tr>
+        <tr>
+          <th>Cuidados</th>
+          <td>
+            As pessoas sob seu cuidado. Depois de falar com alguém, toque em
+            <strong>Marcar contato</strong>: são dois toques — como a pessoa está nesta semana e se
+            ela vem ao GC. A anotação é opcional.
+          </td>
+        </tr>
+        <tr>
+          <th>Atividades</th>
+          <td>
+            Talk, lanche, dinâmica, aniversariantes. Quando a liderança te indica, você
+            <strong>Aceita</strong> ou toca em <strong>“Não vou conseguir”</strong> — aí o motivo é
+            obrigatório, para a liderança conseguir repassar sem ficar perguntando.
+          </td>
+        </tr>
+        <tr>
+          <th>Devocionais</th>
+          <td>
+            Os textos que a liderança da igreja manda. Ficam guardados aqui, em vez de sumirem no
+            meio das mensagens. No fim, toque em <strong>Amém</strong> se quiser responder.
+          </td>
+        </tr>
+        <tr>
+          <th>Supervisão</th>
+          <td>
+            Canal para falar com um supervisor. Dá para marcar a conversa como
+            <strong>reservada</strong>: assim nem o conteúdo nem a existência dela chegam à
+            liderança do GC.
+          </td>
+        </tr>
+        <tr>
+          <th>Transferir cuidado</th>
+          <td>
+            Se você não vai conseguir cuidar de alguém nesta semana, peça a transferência (nos três
+            pontinhos do cartão da pessoa). Até a outra pessoa aceitar, o cuidado continua sendo
+            seu.
+          </td>
+        </tr>
+        <tr>
+          <th>Perfil</th>
+          <td>
+            Como você aparece para o GC, e os seus números: semanas seguidas sem deixar ninguém sem
+            contato, cuidados registrados, pessoas cuidadas.
+          </td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <h2><span class="n">8</span>Quem vê o quê</h2>
+      <ul class="simples">
+        <li>
+          O que você registra sobre alguém é visto por
+          <strong>você, pela liderança e pela supervisão</strong> — nunca pela própria pessoa
+          cuidada.
+        </li>
+        <li>
+          Uma conversa <strong>reservada</strong> com a supervisão não aparece para os líderes do
+          GC. Nem o conteúdo, nem a linha, nem em qualquer contagem.
+        </li>
+        <li>Ninguém — nem a liderança — vê a lista de quem instalou o app ou ligou os avisos.</li>
+        <li>Nos devocionais, a contagem de “Amém” aparece; <strong>quem marcou, não</strong>.</li>
+      </ul>
+      <div class="atencao">
+        <p>
+          Ao escrever uma anotação de cuidado, escreva o suficiente para cuidar bem. Não registre
+          confissões, diagnósticos, documentos ou detalhes íntimos.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">9</span>Se algo der errado</h2>
+      <table>
+        <tr>
+          <th>Não chega aviso nenhum</th>
+          <td>
+            Confira em <span class="caminho">Configurações → Avisos</span> se o interruptor está
+            ligado <em>neste</em> aparelho. No iPhone, o app precisa estar instalado na tela de
+            início.
+          </td>
+        </tr>
+        <tr>
+          <th>A tela parece antiga</th>
+          <td>
+            Feche o app de verdade (arraste para cima no seletor de aplicativos) e abra de novo. A
+            versão nova entra sozinha.
+          </td>
+        </tr>
+        <tr>
+          <th>Esqueci a senha</th>
+          <td>Fale com a liderança. Eles cadastram uma nova e entregam pessoalmente.</td>
+        </tr>
+        <tr>
+          <th>Troquei de celular</th>
+          <td>
+            Instale de novo (passo 2), entre com o mesmo e-mail e senha, e ligue os avisos no
+            aparelho novo.
+          </td>
+        </tr>
+        <tr>
+          <th>Meu nome está errado</th>
+          <td>
+            Em <span class="caminho">Configurações → Meus dados</span> você ajusta nome, telefone,
+            aniversário e como quer ser chamado. Papel e gênero de cuidado só a liderança altera.
+          </td>
+        </tr>
+      </table>
+    </section>
+
+    <footer>
+      Discípulos · GC Novos Começos · discipulos.igrejanovoscomecos.com.br<br />
+      Dúvida que não está aqui? Fale com a liderança do seu GC.
+    </footer>
+  </body>
+</html>

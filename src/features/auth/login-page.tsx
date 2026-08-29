@@ -164,7 +164,8 @@ function ForgotPasswordDialog({
 
         <p className="text-muted-foreground text-sm leading-relaxed">
           Fale com o administrador do sistema. Ele cadastra uma senha nova para você e a entrega
-          pessoalmente; depois de entrar, você mesmo troca em <strong>Perfil</strong>.
+          pessoalmente; depois de entrar, você mesmo troca em{' '}
+          <strong>Configurações → Meus dados</strong>.
         </p>
 
         <DialogFooter>

@@ -79,9 +79,12 @@ begin
   -- O sinal e o mesmo que `public.definir_admin` usa: a marca nao muda por
   -- escrita direta na tabela, nem aqui.
   perform set_config('app.definindo_admin', 'on', true);
+  -- Prefixo, e nao igualdade: o seed nasce com o nome curto e a lideranca
+  -- completa o cadastro no primeiro acesso ("Jhonata Jackson Monteiro Motta").
   update public.profiles
      set is_admin = true
-   where full_name = 'Jhonata Jackson' and role = 'leader' and deleted_at is null;
+   where role = 'leader' and deleted_at is null
+     and (full_name like 'Jhonata Jackson%' or display_name = 'Jhonata Jackson');
   perform set_config('app.definindo_admin', 'off', true);
 end;
 $$;

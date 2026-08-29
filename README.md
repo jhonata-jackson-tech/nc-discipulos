@@ -116,6 +116,8 @@ mesma RLS de todo mundo.
 
 - **React 19 + TypeScript + Vite 8**
 - **Tailwind CSS v4** com tokens próprios e componentes no estilo shadcn/ui
+- Paleta neutra: preto e branco em tons suaves, nunca absolutos; cor só onde
+  informa (erro, confirmação, atenção)
 - **React Router 7**, **TanStack Query 5**, **React Hook Form + Zod 4**
 - **PostgreSQL 17** com Row Level Security e funções de servidor
 - **PostgREST** para os dados, **Express 5** para sessão e geração da semana
@@ -483,8 +485,13 @@ O manifest e o service worker são gerados no build. Para instalar:
 - **Android/Chrome** — abra o site e use *Instalar app* (ou o menu ⋮ → *Adicionar à tela inicial*).
 - **iPhone/Safari** — toque em **Compartilhar** → **Adicionar à Tela de Início**.
 
-Os ícones ficam em `public/icons/`, gerados por `node scripts/generate-icons.mjs`, e
-podem ser trocados pela identidade definitiva do GC.
+Os ícones saem de `node scripts/generate-icons.mjs`, a partir da marca guardada
+em `scripts/marca.mask.mjs` — a imagem enviada pela liderança, recortada e
+reamostrada uma vez. Ela fica ali como máscara, e não como PNG solto, para os
+ícones poderem ser gerados em qualquer máquina, sem ferramenta de imagem
+instalada. Dentro do aplicativo a mesma marca entra como máscara CSS sobre
+`currentColor`: um arquivo só serve o tema claro, o escuro e o painel escuro da
+tela de entrada, sempre com o contraste certo.
 
 O cache guarda apenas o esqueleto da aplicação e as fontes. **Nenhuma resposta
 autenticada é cacheada** — cuidado, feedback e conversa de supervisão nunca ficam
@@ -732,6 +739,12 @@ específico.
 responsabilidade — e a cobrança na tela de quem pediu — continua com o cuidador
 original. Depois do aceite, a RLS deixa de mostrar aquela atribuição a quem
 transferiu; a interface trata esse caso em vez de assumir que o dado sempre vem.
+
+**O documento não rola: quem rola é o conteúdo.** No celular essa é a diferença
+entre parecer um site e parecer um app. Com o documento rolando, a barra
+inferior sobe junto com o dedo, o cabeçalho some e o iOS estica a página inteira
+no fim da lista. O shell trava na altura do visor e a área de conteúdo é a única
+com rolagem — `tests/e2e/responsivo.spec.ts` falha se isso regredir.
 
 **O tema é uma classe, não uma media query.** `prefers-color-scheme` decide
 apenas quando a escolha é "seguir o sistema". Um script inline no `index.html`

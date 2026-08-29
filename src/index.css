@@ -8,8 +8,8 @@
 
 /* =========================================================================
    Cuidar GC - tokens de design
-   Paleta: azul-petroleo/esmeralda como primaria, fundo claro levemente quente,
-   ambar e coral reservados para atencao. Nada decorativo sem funcao.
+   Paleta neutra: preto e branco em tons suaves, nunca absolutos. Cor so onde
+   ela informa - erro, confirmacao, atencao. Nada decorativo sem funcao.
    ========================================================================= */
 
 @theme inline {
@@ -52,102 +52,108 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --shadow-card: 0 1px 2px 0 rgb(24 32 30 / 0.04), 0 1px 3px 0 rgb(24 32 30 / 0.06);
-  --shadow-raised: 0 4px 12px -2px rgb(24 32 30 / 0.08), 0 2px 6px -2px rgb(24 32 30 / 0.05);
-  --shadow-overlay: 0 16px 40px -12px rgb(24 32 30 / 0.18);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+  --shadow-overlay: 0 16px 40px -12px rgb(0 0 0 / 0.18);
 }
 
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.986 0.004 85);
-  --foreground: oklch(0.24 0.02 195);
+  /* Branco de papel, nao branco de tela: 0.985 tira o brilho sem cinzar. */
+  --background: oklch(0.985 0 0);
+  /* Preto suave. Preto puro sobre branco puro cansa a vista em texto corrido. */
+  --foreground: oklch(0.25 0 0);
 
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.52 0.085 189);
-  --primary-foreground: oklch(0.99 0.005 180);
-  --primary-soft: oklch(0.955 0.022 185);
+  --primary: oklch(0.32 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-soft: oklch(0.945 0 0);
 
-  --secondary: oklch(0.965 0.006 85);
-  --secondary-foreground: oklch(0.32 0.02 195);
+  --secondary: oklch(0.965 0 0);
+  --secondary-foreground: oklch(0.32 0 0);
 
-  --muted: oklch(0.965 0.006 85);
-  --muted-foreground: oklch(0.53 0.015 195);
+  --muted: oklch(0.965 0 0);
+  --muted-foreground: oklch(0.52 0 0);
 
-  --accent: oklch(0.955 0.022 185);
-  --accent-foreground: oklch(0.36 0.06 189);
+  --accent: oklch(0.945 0 0);
+  --accent-foreground: oklch(0.3 0 0);
 
-  --destructive: oklch(0.58 0.17 25);
-  --destructive-foreground: oklch(0.99 0.005 60);
+  /* As unicas cores do sistema, e todas com funcao: erro, confirmacao, atencao
+     e informacao. Em chroma baixo, para avisar sem gritar. */
+  --destructive: oklch(0.55 0.14 25);
+  --destructive-foreground: oklch(0.99 0 0);
 
-  --success: oklch(0.58 0.11 155);
-  --success-foreground: oklch(0.99 0.005 155);
+  --success: oklch(0.55 0.085 155);
+  --success-foreground: oklch(0.99 0 0);
 
-  --warning: oklch(0.72 0.145 65);
-  --warning-foreground: oklch(0.26 0.05 65);
+  --warning: oklch(0.72 0.11 70);
+  --warning-foreground: oklch(0.28 0.04 70);
 
-  --info: oklch(0.55 0.09 240);
-  --info-foreground: oklch(0.99 0.005 240);
+  --info: oklch(0.53 0.055 250);
+  --info-foreground: oklch(0.99 0 0);
 
-  --border: oklch(0.915 0.007 90);
-  --input: oklch(0.9 0.008 90);
-  --ring: oklch(0.52 0.085 189);
+  --border: oklch(0.915 0 0);
+  --input: oklch(0.885 0 0);
+  --ring: oklch(0.45 0 0);
 
-  --brand-panel: oklch(0.52 0.085 189);
-  --brand-panel-foreground: oklch(0.99 0.005 180);
+  /* Painel da tela de entrada: o preto suave onde a marca branca aparece. */
+  --brand-panel: oklch(0.22 0 0);
+  --brand-panel-foreground: oklch(0.97 0 0);
 
   color-scheme: light;
 }
 
 /* =============================================================================
    Modo escuro
-   Mesma paleta, outra luz: fundo petroleo profundo, cartoes um degrau acima do
-   fundo e a primaria mais luminosa para manter o contraste AA.
+   Mesma paleta, outra luz: cinza-carvao no lugar de preto puro - em OLED o
+   preto absoluto encardece o texto e faz o rastro do dedo aparecer. Os cartoes
+   ficam um degrau acima do fundo, e a primaria vira quase branca.
    ============================================================================= */
 .dark {
-  --background: oklch(0.185 0.012 200);
-  --foreground: oklch(0.93 0.008 190);
+  --background: oklch(0.17 0 0);
+  --foreground: oklch(0.94 0 0);
 
-  --card: oklch(0.235 0.014 200);
+  --card: oklch(0.215 0 0);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.255 0.014 200);
+  --popover: oklch(0.235 0 0);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.74 0.115 178);
-  --primary-foreground: oklch(0.18 0.02 190);
-  --primary-soft: oklch(0.31 0.042 185);
+  --primary: oklch(0.93 0 0);
+  --primary-foreground: oklch(0.2 0 0);
+  --primary-soft: oklch(0.285 0 0);
 
-  --secondary: oklch(0.275 0.013 200);
-  --secondary-foreground: oklch(0.9 0.01 190);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.92 0 0);
 
-  --muted: oklch(0.275 0.013 200);
-  --muted-foreground: oklch(0.72 0.014 195);
+  --muted: oklch(0.26 0 0);
+  --muted-foreground: oklch(0.72 0 0);
 
-  --accent: oklch(0.31 0.042 185);
-  --accent-foreground: oklch(0.88 0.055 180);
+  --accent: oklch(0.285 0 0);
+  --accent-foreground: oklch(0.93 0 0);
 
-  --destructive: oklch(0.68 0.155 24);
+  --destructive: oklch(0.68 0.145 24);
   --destructive-foreground: oklch(0.16 0.02 24);
 
-  --success: oklch(0.73 0.125 158);
+  --success: oklch(0.72 0.1 158);
   --success-foreground: oklch(0.16 0.02 158);
 
-  --warning: oklch(0.79 0.13 72);
-  --warning-foreground: oklch(0.87 0.095 75);
+  --warning: oklch(0.79 0.11 72);
+  --warning-foreground: oklch(0.2 0.03 72);
 
-  --info: oklch(0.71 0.1 240);
-  --info-foreground: oklch(0.16 0.02 240);
+  --info: oklch(0.72 0.07 250);
+  --info-foreground: oklch(0.16 0.02 250);
 
-  --border: oklch(0.315 0.013 200);
-  --input: oklch(0.36 0.014 200);
-  --ring: oklch(0.74 0.115 178);
+  --border: oklch(0.3 0 0);
+  --input: oklch(0.35 0 0);
+  --ring: oklch(0.75 0 0);
 
-  --brand-panel: oklch(0.235 0.03 190);
-  --brand-panel-foreground: oklch(0.93 0.02 185);
+  --brand-panel: oklch(0.2 0 0);
+  --brand-panel-foreground: oklch(0.94 0 0);
 
   /* No escuro a sombra sozinha nao separa camadas; ela fica mais densa e a
      borda dos cartoes assume parte do trabalho. */
@@ -197,6 +203,22 @@
     background: var(--background);
   }
 
+  /* O documento nao rola: quem rola e a area de conteudo, dentro do shell.
+     No celular isso e a diferenca entre parecer um site e parecer um app -
+     acaba o arrasta-para-todo-lado, a barra inferior nao "foge" e o iOS para
+     de esticar a pagina inteira no fim da lista. Cada tela de nivel mais alto
+     e responsavel pela propria rolagem. */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   /* Numeros alinhados em tabelas e indicadores. */
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -204,6 +226,20 @@
 }
 
 @layer utilities {
+  /* A marca entra como mascara, nao como imagem: assim ela assume a cor de
+     quem a contem (`bg-current`) e serve no claro, no escuro e sobre o painel
+     de entrada, com um arquivo so. */
+  .marca {
+    mask-image: url('/marca.png');
+    -webkit-mask-image: url('/marca.png');
+    mask-size: contain;
+    -webkit-mask-size: contain;
+    mask-repeat: no-repeat;
+    -webkit-mask-repeat: no-repeat;
+    mask-position: center;
+    -webkit-mask-position: center;
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }

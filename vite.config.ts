@@ -31,7 +31,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'marca.png'],
       manifest: {
         name: 'Cuidar GC',
         short_name: 'Cuidar GC',
@@ -42,8 +42,8 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#faf9f7',
-        theme_color: '#0f766e',
+        background_color: '#fafafa',
+        theme_color: '#232323',
         categories: ['productivity', 'lifestyle'],
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

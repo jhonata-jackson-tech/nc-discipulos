@@ -58,6 +58,39 @@ test.describe('composição responsiva', () => {
     })
   }
 
+  /**
+   * O documento em si nao pode rolar - nem para o lado, nem para baixo.
+   *
+   * Quem rola e a area de conteudo, dentro do shell. Sem isso o app "escorrega"
+   * no celular: a barra inferior sobe junto com o dedo, o cabecalho some e o
+   * iOS estica a pagina inteira no fim da lista.
+   */
+  test('o documento não rola: só o conteúdo', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 })
+    await signIn(page, 'leader')
+
+    for (const rota of ROTAS) {
+      await page.goto(rota.path)
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+      const documento = await page.evaluate(() => {
+        const doc = document.documentElement
+        return {
+          rolaLado: doc.scrollWidth - doc.clientWidth,
+          rolaBaixo: doc.scrollHeight - doc.clientHeight,
+          corpoRolaBaixo: document.body.scrollHeight - document.body.clientHeight,
+        }
+      })
+
+      expect(documento.rolaLado, `${rota.nome}: o documento rola na horizontal`).toBeLessThanOrEqual(1)
+      expect(documento.rolaBaixo, `${rota.nome}: o documento rola na vertical`).toBeLessThanOrEqual(1)
+      expect(
+        documento.corpoRolaBaixo,
+        `${rota.nome}: o corpo da página rola por fora do conteúdo`,
+      ).toBeLessThanOrEqual(1)
+    }
+  })
+
   test('barra inferior no celular, sidebar no desktop', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 780 })
     await signIn(page, 'leader')

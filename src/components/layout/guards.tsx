@@ -1,8 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { Heart, Lock, MailQuestion } from 'lucide-react'
+import { Lock, MailQuestion } from 'lucide-react'
 import { useSession } from '@/features/auth/session-context'
 import { useMembers } from '@/features/members/use-members'
 import { needsSetup } from '@/features/setup/needs-setup'
+import { Marca } from '@/components/common/marca'
 import type { AppRole } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,7 +13,7 @@ export function FullPageLoader() {
   return (
     <div className="flex min-h-dvh items-center justify-center" role="status" aria-label="Carregando">
       <span className="bg-primary text-primary-foreground flex size-12 animate-pulse items-center justify-center rounded-xl">
-        <Heart className="size-6" fill="currentColor" strokeWidth={0} aria-hidden />
+        <Marca className="size-6" />
       </span>
     </div>
   )

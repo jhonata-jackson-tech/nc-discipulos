@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { Bell, Heart, LogOut, MoreHorizontal, User } from 'lucide-react'
+import { Bell, LogOut, MoreHorizontal, User } from 'lucide-react'
 import { useSession } from '@/features/auth/session-context'
 import { useUnreadCount } from '@/features/notifications/use-notifications'
 import { navFor } from '@/app/navigation'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { Marca } from '@/components/common/marca'
 import { DemoRoleSwitcher } from '@/components/layout/demo-role-switcher'
 import { cn, initials } from '@/lib/utils'
 import { roleLabelFor } from '@/lib/labels'
@@ -39,12 +40,16 @@ export function AppShell() {
   const [moreOpen, setMoreOpen] = React.useState(false)
 
   return (
-    <div className="bg-background min-h-dvh lg:grid lg:grid-cols-[260px_1fr]">
+    // A altura e travada na do visor e a rolagem acontece **dentro** do
+    // conteudo, nao no documento. E o que faz o app parecer app no celular:
+    // cabecalho e barra inferior nao saem do lugar, e nao existe aquele
+    // arrasta-para-todo-lado do documento inteiro.
+    <div className="bg-background h-dvh overflow-hidden lg:grid lg:grid-cols-[260px_1fr]">
       {/* --------------------------------------------------------- sidebar */}
-      <aside className="bg-card sticky top-0 hidden h-dvh flex-col gap-1 border-r px-3 py-5 lg:flex">
+      <aside className="bg-card hidden h-full min-h-0 flex-col gap-1 overflow-y-auto border-r px-3 py-5 lg:flex">
         <div className="flex items-center gap-2.5 px-2 pb-5">
           <span className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg">
-            <Heart className="size-5" fill="currentColor" strokeWidth={0} aria-hidden />
+            <Marca className="size-5" />
           </span>
           <div className="leading-tight">
             <p className="font-display text-[15px] font-bold">Cuidar GC</p>
@@ -79,12 +84,12 @@ export function AppShell() {
       </aside>
 
       {/* --------------------------------------------------------- conteudo */}
-      <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="bg-background/85 safe-top sticky top-0 z-30 border-b backdrop-blur-md lg:hidden">
+      <div className="flex h-full min-h-0 min-w-0 flex-col">
+        <header className="bg-background/85 safe-top z-30 shrink-0 border-b backdrop-blur-md lg:hidden">
           <div className="flex h-14 items-center justify-between gap-2 px-4">
             <div className="flex items-center gap-2">
               <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg">
-                <Heart className="size-4" fill="currentColor" strokeWidth={0} aria-hidden />
+                <Marca className="size-4" />
               </span>
               <span className="font-display text-[15px] font-bold">Cuidar GC</span>
             </div>
@@ -107,15 +112,19 @@ export function AppShell() {
           </div>
         </header>
 
-        <header className="bg-background/85 sticky top-0 z-30 hidden border-b backdrop-blur-md lg:block">
+        <header className="bg-background/85 z-30 hidden shrink-0 border-b backdrop-blur-md lg:block">
           <div className="flex h-16 items-center justify-end gap-1 px-8">
             <ThemeToggle />
             <NotificationBell count={unread} />
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-28 lg:px-8 lg:pt-8 lg:pb-12">
-          <Outlet />
+        {/* O unico lugar que rola. `overscroll-contain` impede que o gesto
+            vaze para a pagina de tras quando a lista chega ao fim. */}
+        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-28 lg:px-8 lg:pt-8 lg:pb-12">
+            <Outlet />
+          </div>
         </main>
       </div>
 

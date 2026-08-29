@@ -1,5 +1,5 @@
-import { Heart } from 'lucide-react'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { Marca } from '@/components/common/marca'
 
 /**
  * Tela de entrada: no desktop, duas colunas com uma palavra acolhedora ao lado
@@ -17,11 +17,13 @@ export function AuthLayout({
   footer?: React.ReactNode
 }) {
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-2">
+    // O documento nao rola (veja `index.css`), entao esta tela cuida da
+    // propria rolagem - em telefone pequeno o formulario passa da altura.
+    <div className="h-full overflow-x-hidden overflow-y-auto lg:grid lg:grid-cols-2">
       <aside className="bg-brand-panel text-brand-panel-foreground relative hidden flex-col justify-between p-10 lg:flex">
         <div className="flex items-center gap-2.5">
           <span className="bg-brand-panel-foreground/15 flex size-10 items-center justify-center rounded-lg">
-            <Heart className="size-5" fill="currentColor" strokeWidth={0} aria-hidden />
+            <Marca className="size-5" />
           </span>
           <span className="font-display text-lg font-bold">Cuidar GC</span>
         </div>
@@ -41,7 +43,7 @@ export function AuthLayout({
         </p>
       </aside>
 
-      <main className="relative flex min-h-dvh flex-col justify-center px-5 py-10 sm:px-10">
+      <main className="relative flex min-h-full flex-col justify-center px-5 py-10 sm:px-10">
         <div className="safe-top absolute top-3 right-3">
           <ThemeToggle />
         </div>
@@ -49,7 +51,7 @@ export function AuthLayout({
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-7 lg:hidden">
             <span className="bg-primary text-primary-foreground mb-4 flex size-11 items-center justify-center rounded-xl">
-              <Heart className="size-6" fill="currentColor" strokeWidth={0} aria-hidden />
+              <Marca className="size-6" />
             </span>
           </div>
 

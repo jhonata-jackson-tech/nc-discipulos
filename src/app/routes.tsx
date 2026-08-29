@@ -93,6 +93,10 @@ export const router = createBrowserRouter([
                 element: <RequireSetup />,
                 children: [
                   { path: '/', element: <MyWeekPage /> },
+                  // Avisos enviados antes da correção apontam para cá. Um
+                  // desvio custa uma linha; um "página não encontrada" na mão
+                  // de 33 pessoas custa confiança.
+                  { path: '/minha-semana', element: <Navigate to="/" replace /> },
                   { path: '/notificacoes', element: <NotificationsPage /> },
                   { path: '/perfil', element: <ProfilePage /> },
                   { path: '/atividades', element: <ActivitiesPage /> },

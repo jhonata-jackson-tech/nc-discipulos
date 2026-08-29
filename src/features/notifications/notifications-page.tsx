@@ -1,7 +1,12 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, CheckCheck } from 'lucide-react'
-import { useMarkNotificationsRead, useNotifications } from './use-notifications'
+import { Bell, CheckCheck, Trash2, X } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  useDeleteNotifications,
+  useMarkNotificationsRead,
+  useNotifications,
+} from './use-notifications'
 import { PushCard } from './push-card'
 import { formatDateTime } from '@/lib/date'
 import { cn } from '@/lib/utils'
@@ -10,10 +15,23 @@ import { CardListSkeleton, ErrorState } from '@/components/common/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function NotificationsPage() {
   const notifications = useNotifications()
   const markRead = useMarkNotificationsRead()
+  const apagar = useDeleteNotifications()
+  const [confirmarLimpeza, setConfirmarLimpeza] = React.useState(false)
+
+  const todos = notifications.data ?? []
 
   const unread = (notifications.data ?? []).filter((item) => !item.read_at)
 
@@ -32,15 +50,23 @@ export function NotificationsPage() {
         title="Notificações"
         description="Avisos sobre a sua semana, atividades e transferências."
         actions={
-          unread.length > 0 ? (
-            <Button
-              variant="outline"
-              onClick={() => markRead.mutate(unread.map((item) => item.id))}
-              loading={markRead.isPending}
-            >
-              <CheckCheck aria-hidden />
-              Marcar todas como lidas
-            </Button>
+          todos.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {unread.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => markRead.mutate(unread.map((item) => item.id))}
+                  loading={markRead.isPending}
+                >
+                  <CheckCheck aria-hidden />
+                  Marcar todas como lidas
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setConfirmarLimpeza(true)}>
+                <Trash2 aria-hidden />
+                Limpar tudo
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -92,6 +118,21 @@ export function NotificationsPage() {
                     {formatDateTime(notification.created_at)}
                   </p>
                 </div>
+
+                {/* Apagar um aviso é um gesto pequeno e sem volta: fica fora
+                    do link, para não disparar junto com a navegação. */}
+                <button
+                  type="button"
+                  aria-label={`Apagar aviso "${notification.title}"`}
+                  onClick={(evento) => {
+                    evento.preventDefault()
+                    evento.stopPropagation()
+                    apagar.mutate([notification.id])
+                  }}
+                  className="text-muted-foreground hover:bg-secondary hover:text-foreground -m-1 flex size-8 shrink-0 items-center justify-center rounded-md transition-colors"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
               </div>
             </Card>
           )
@@ -109,6 +150,29 @@ export function NotificationsPage() {
           )
         })}
       </ul>
+
+      <AlertDialog open={confirmarLimpeza} onOpenChange={setConfirmarLimpeza}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Limpar todos os avisos?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Os {todos.length} avisos desta lista serão apagados. Isso não desfaz nada do que
+            aconteceu — os cuidados, as atividades e as transferências continuam onde estão.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                apagar.mutate(
+                  todos.map((item) => item.id),
+                  { onSuccess: () => toast.success('Avisos apagados.') },
+                )
+              }}
+            >
+              Apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

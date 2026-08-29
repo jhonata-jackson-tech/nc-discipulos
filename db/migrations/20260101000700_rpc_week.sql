@@ -190,7 +190,7 @@ begin
     perform app.notify(
       caregiver.caregiver_id, 'week_published', 'Sua semana de cuidado esta disponivel',
       format('Voce ficou responsavel por %s pessoa(s) nesta semana.', caregiver.total),
-      '/minha-semana');
+      '/');
   end loop;
 
   perform app.audit('week.published', 'care_weeks', p_week_id, null,
@@ -315,7 +315,7 @@ begin
 
   perform app.notify(p_recipient_id, 'transfer_requested', 'Pedido de transferencia de cuidado',
                      format('%s pediu que voce assuma o cuidado de %s.', v_requester, v_cared),
-                     '/minha-semana');
+                     '/');
   perform app.audit('transfer.requested', 'transfer_requests', v_id, null,
                     jsonb_build_object('assignmentId', p_assignment_id, 'recipientId', p_recipient_id));
   return v_id;
@@ -377,7 +377,7 @@ begin
     case when p_accept then 'Transferencia aceita' else 'Transferencia recusada' end,
     format('%s %s o cuidado de %s.', v_responder,
            case when p_accept then 'aceitou' else 'recusou' end, v_cared),
-    '/minha-semana');
+    '/');
 
   perform app.audit(
     case when p_accept then 'transfer.accepted' else 'transfer.declined' end,
@@ -444,9 +444,9 @@ begin
 
   select full_name into v_cared from public.profiles where id = v_before.cared_for_id;
   perform app.notify(p_new_caregiver_id, 'assignment_new', 'Voce recebeu um cuidado',
-                     format('A lideranca atribuiu o cuidado de %s a voce.', v_cared), '/minha-semana');
+                     format('A lideranca atribuiu o cuidado de %s a voce.', v_cared), '/');
   perform app.notify(v_before.caregiver_id, 'general', 'Um cuidado saiu da sua lista',
-                     format('O cuidado de %s foi reorganizado pela lideranca.', v_cared), '/minha-semana');
+                     format('O cuidado de %s foi reorganizado pela lideranca.', v_cared), '/');
 
   perform app.audit('assignment.reassigned', 'care_assignments', p_assignment_id,
                     jsonb_build_object('caregiverId', v_before.caregiver_id),

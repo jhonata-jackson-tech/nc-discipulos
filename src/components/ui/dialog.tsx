@@ -3,7 +3,50 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export const Dialog = DialogPrimitive.Root
+/**
+ * Diálogo que o botão voltar fecha.
+ *
+ * Sem isto, no celular o voltar sai da tela em vez de fechar o formulário: a
+ * pessoa queria só desistir do cadastro e foi parar em outro lugar. Abrir
+ * empilha uma entrada no histórico; fechar por qualquer caminho (X, Esc,
+ * salvar) desempilha.
+ */
+export function Dialog({
+  open,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) {
+  const empilhado = React.useRef(false)
+
+  React.useEffect(() => {
+    if (open && !empilhado.current) {
+      empilhado.current = true
+      window.history.pushState({ ...window.history.state, dialogoAberto: true }, '')
+      return
+    }
+
+    // Fechado por dentro (X, Esc, salvou): tira do histórico a entrada que
+    // empilhamos, senão o próximo voltar não faria nada visível.
+    if (!open && empilhado.current) {
+      empilhado.current = false
+      if (window.history.state?.dialogoAberto) window.history.back()
+    }
+  }, [open])
+
+  React.useEffect(() => {
+    if (!open) return
+
+    const aoVoltar = () => {
+      empilhado.current = false
+      onOpenChange?.(false)
+    }
+
+    window.addEventListener('popstate', aoVoltar)
+    return () => window.removeEventListener('popstate', aoVoltar)
+  }, [open, onOpenChange])
+
+  return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />
+}
 export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogClose = DialogPrimitive.Close
 

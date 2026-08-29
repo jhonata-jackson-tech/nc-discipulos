@@ -24,6 +24,7 @@ import { formatDate } from '@/lib/date'
 import { careGenderShort, memberStatusLabel, roleLabel } from '@/lib/labels'
 import type { AppRole, MemberStatus, Profile } from '@/types/database'
 import { PageHeader } from '@/components/common/page-header'
+import { Switch } from '@/components/ui/switch'
 import { RoleBadge } from '@/components/common/badges'
 import { Person } from '@/components/common/person'
 import { CardListSkeleton, ErrorState } from '@/components/common/states'
@@ -86,6 +87,33 @@ export function MembersPage() {
   const pendingGender = (members.data ?? []).filter(
     (member) => member.status === 'active' && member.care_gender === null,
   )
+
+  /**
+   * O tamanho do GC.
+   *
+   * Quem lidera precisa desse número na ponta da língua - e ele muda conforme
+   * a pergunta: "quantos somos" inclui a liderança, "quantos são cuidados"
+   * não. Por isso os dois interruptores, em vez de um número só que estaria
+   * certo pela metade.
+   */
+  const [contarLideres, setContarLideres] = React.useState(true)
+  const [contarSupervisores, setContarSupervisores] = React.useState(false)
+
+  const contagem = React.useMemo(() => {
+    const ativos = (members.data ?? []).filter((m) => m.status === 'active')
+    const dentro = ativos.filter(
+      (m) =>
+        (m.role !== 'leader' || contarLideres) && (m.role !== 'supervisor' || contarSupervisores),
+    )
+    return {
+      total: dentro.length,
+      lideres: ativos.filter((m) => m.role === 'leader').length,
+      supervisores: ativos.filter((m) => m.role === 'supervisor').length,
+      discipulos: ativos.filter((m) => m.role === 'disciple').length,
+      irmaos: ativos.filter((m) => m.role === 'member').length,
+      inativos: (members.data ?? []).length - ativos.length,
+    }
+  }, [members.data, contarLideres, contarSupervisores])
 
   const openEdit = (member: Profile | null) => {
     setEditing(member)
@@ -174,6 +202,33 @@ export function MembersPage() {
           </Select>
         </CardContent>
       </Card>
+
+      {members.isSuccess && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+            <div>
+              <p className="font-display text-3xl font-bold tabular">{contagem.total}</p>
+              <p className="text-muted-foreground text-sm">
+                {contagem.discipulos} discípulo(s) · {contagem.irmaos} irmão(s)
+                {contarLideres && ` · ${contagem.lideres} líder(es)`}
+                {contarSupervisores && ` · ${contagem.supervisores} supervisor(es)`}
+                {contagem.inativos > 0 && ` · ${contagem.inativos} inativo(s) fora da conta`}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={contarLideres} onCheckedChange={setContarLideres} />
+                Contar líderes
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Switch checked={contarSupervisores} onCheckedChange={setContarSupervisores} />
+                Contar supervisores
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {members.isLoading && <CardListSkeleton rows={5} />}
       {members.isError && <ErrorState error={members.error} onRetry={() => members.refetch()} />}

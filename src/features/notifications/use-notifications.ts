@@ -24,6 +24,19 @@ export function useUnreadCount() {
   return data?.filter((n) => !n.read_at).length ?? 0
 }
 
+/** Apagar é definitivo e é da própria pessoa: a central é pessoal. */
+export function useDeleteNotifications() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return
+      const { error } = await db.from('notifications').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+}
+
 export function useMarkNotificationsRead() {
   const queryClient = useQueryClient()
   return useMutation({

@@ -276,6 +276,17 @@
     margin-inline-start: 0.125rem;
   }
 
+  /* Sem barra de rolagem à vista: o conteúdo rola igual, mas a barra some -
+     é o que faz parecer aplicativo. A rolagem continua inteira para teclado,
+     roda do mouse e leitor de tela. */
+  * {
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;

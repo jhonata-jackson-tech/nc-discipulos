@@ -11,6 +11,7 @@ import { config } from './config.ts'
 import { pool } from './db.ts'
 import { errorHandler } from './http.ts'
 import { ouvirNotificacoes } from './push.ts'
+import { ligarRelogio } from './relogio.ts'
 import { authRouter } from './routes/auth.ts'
 import { pushRouter } from './routes/push.ts'
 import { weekRouter } from './routes/week.ts'
@@ -57,6 +58,9 @@ const server = app.listen(config.port, () => {
 
 // Entrega dos avisos fora do app. Sem chaves VAPID, apenas registra e segue.
 ouvirNotificacoes()
+
+// Os avisos que ninguém dispara: o resumo de segunda e os aniversários.
+ligarRelogio()
 
 for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(sinal, () => {

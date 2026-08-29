@@ -45,5 +45,6 @@ $$;
 -- Cada pessoa apaga os proprios avisos, e so os proprios: a central e pessoal.
 grant delete on public.notifications to authenticated;
 
+drop policy if exists notifications_delete on public.notifications;
 create policy notifications_delete on public.notifications
   for delete to authenticated using (profile_id = app.current_profile_id());

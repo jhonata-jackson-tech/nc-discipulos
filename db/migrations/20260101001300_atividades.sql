@@ -11,6 +11,7 @@
 -- motivo. A situacao antiga sai da tela.
 -- =============================================================================
 
+drop type if exists public.activity_response cascade;
 create type public.activity_response as enum ('pendente', 'aceita', 'recusada');
 
 alter table public.activity_assignees
@@ -109,6 +110,7 @@ grant execute on function public.respond_activity(uuid, boolean, text) to authen
 -- Quem foi indicado precisa poder registrar a propria resposta.
 grant update on public.activity_assignees to authenticated;
 
+drop policy if exists activity_assignees_respond on public.activity_assignees;
 create policy activity_assignees_respond on public.activity_assignees
   for update to authenticated
   using (profile_id = app.current_profile_id())

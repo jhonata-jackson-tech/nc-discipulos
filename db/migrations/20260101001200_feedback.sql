@@ -18,6 +18,7 @@
 --
 -- `sem_resposta` nao e ausencia de dado - e dado. Silencio repetido e
 -- exatamente o que a lideranca precisa enxergar cedo.
+drop type if exists public.well_being cascade;
 create type public.well_being as enum (
   'sem_resposta',
   'precisa_ajuda',
@@ -28,6 +29,7 @@ create type public.well_being as enum (
 );
 
 -- Presenca no GC da semana, na palavra da propria pessoa.
+drop type if exists public.gc_intent cascade;
 create type public.gc_intent as enum ('vem', 'nao_vem', 'nao_sabe');
 
 alter table public.contact_logs

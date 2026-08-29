@@ -38,3 +38,7 @@ grant select, insert, update on auth.refresh_tokens to auth_service;
 -- aparelhos - recebe o texto ja filtrado e devolve se entregou.
 grant usage on schema app to auth_service;
 grant execute on function app.push_targets(uuid), app.push_result(uuid, boolean) to auth_service;
+
+-- O relogio dos avisos com hora marcada. O servico so pergunta "esta na hora?";
+-- quem decide, e quem garante que nao repete, e o banco.
+grant execute on function app.rodar_avisos_agendados() to auth_service;

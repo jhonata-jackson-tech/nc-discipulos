@@ -18,6 +18,8 @@ import type {
   SupervisionStatus,
   SupervisionUrgency,
   TransferStatus,
+  WellBeing,
+  GcIntent,
 } from '@/types/database'
 
 export const roleLabel: Record<AppRole, string> = {
@@ -84,6 +86,31 @@ export const attentionLabel: Record<AttentionLevel, string> = {
   normal: 'Tudo bem',
   watch: 'Observar',
   leader_action: 'Liderança precisa agir',
+}
+
+export const wellBeingLabel: Record<WellBeing, string> = {
+  sem_resposta: 'Não respondeu',
+  precisa_ajuda: 'Precisa de ajuda',
+  pra_baixo: 'Meio pra baixo',
+  seguindo: 'Seguindo',
+  bem: 'Bem',
+  muito_bem: 'Muito bem',
+}
+
+/** Uma palavra a mais, para quem está registrando não hesitar. */
+export const wellBeingHint: Record<WellBeing, string> = {
+  sem_resposta: 'Falei, mas não obtive retorno',
+  precisa_ajuda: 'Passando por algo difícil agora',
+  pra_baixo: 'Não está bem, mas segue',
+  seguindo: 'Levando a vida, sem novidade',
+  bem: 'Tranquila',
+  muito_bem: 'Animada, com boas notícias',
+}
+
+export const gcIntentLabel: Record<GcIntent, string> = {
+  vem: 'Vem ao GC',
+  nao_vem: 'Não vem',
+  nao_sabe: 'Ainda não sabe',
 }
 
 export const channelLabel: Record<ContactChannel, string> = {

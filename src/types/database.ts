@@ -19,6 +19,23 @@ export type AssignmentStatus =
   | 'needs_attention'
 export type AssignmentOrigin = 'fixed_disciple' | 'rotation' | 'manual' | 'transfer'
 export type AttentionLevel = 'normal' | 'watch' | 'leader_action'
+
+/**
+ * Como a pessoa está nesta semana.
+ *
+ * A escala evita "bem/mal": diante dessa dupla, quem responde tende a ser
+ * gentil em vez de preciso. `sem_resposta` não é ausência de dado - silêncio
+ * repetido é justamente o que a liderança precisa enxergar cedo.
+ */
+export type WellBeing =
+  | 'sem_resposta'
+  | 'precisa_ajuda'
+  | 'pra_baixo'
+  | 'seguindo'
+  | 'bem'
+  | 'muito_bem'
+
+export type GcIntent = 'vem' | 'nao_vem' | 'nao_sabe'
 export type ContactChannel = 'whatsapp' | 'call' | 'in_person' | 'message' | 'video' | 'other'
 export type TransferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
 
@@ -128,6 +145,8 @@ export interface ContactLog {
   got_reply: boolean
   feedback: string | null
   attention_level: AttentionLevel
+  well_being: WellBeing | null
+  coming_to_gc: GcIntent | null
   created_at: string
 }
 

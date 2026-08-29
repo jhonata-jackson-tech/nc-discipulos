@@ -2,17 +2,22 @@ import * as React from 'react'
 import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Info } from 'lucide-react'
+import { ChevronDown, Info } from 'lucide-react'
 import { todayISO } from '@/lib/date'
-import { FEEDBACK_PRIVACY_HINT, assignmentStatusLabel, attentionLabel, channelLabel } from '@/lib/labels'
-import type { AssignmentStatus, AttentionLevel, ContactChannel } from '@/types/database'
+import {
+  FEEDBACK_PRIVACY_HINT,
+  channelLabel,
+  gcIntentLabel,
+  wellBeingHint,
+  wellBeingLabel,
+} from '@/lib/labels'
+import type { ContactChannel, GcIntent, WellBeing } from '@/types/database'
 import { useLogContact, type AssignmentWithPeople } from './use-care'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -25,28 +30,38 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const CHANNELS: ContactChannel[] = ['whatsapp', 'call', 'in_person', 'message', 'video', 'other']
-const STATUSES: AssignmentStatus[] = [
-  'contacted',
-  'awaiting_reply',
-  'follow_up',
-  'needs_attention',
-  'pending',
+
+/** Do pior para o melhor: a ordem ajuda a escolher sem ler tudo. */
+const ESCALA: WellBeing[] = [
+  'sem_resposta',
+  'precisa_ajuda',
+  'pra_baixo',
+  'seguindo',
+  'bem',
+  'muito_bem',
 ]
-const ATTENTION: AttentionLevel[] = ['normal', 'watch', 'leader_action']
+
+const PRESENCA: GcIntent[] = ['vem', 'nao_vem', 'nao_sabe']
 
 const schema = z.object({
+  wellBeing: z.enum(['sem_resposta', 'precisa_ajuda', 'pra_baixo', 'seguindo', 'bem', 'muito_bem'], {
+    message: 'Diga como a pessoa está.',
+  }),
+  comingToGc: z.enum(['vem', 'nao_vem', 'nao_sabe']).optional(),
   channel: z.enum(['whatsapp', 'call', 'in_person', 'message', 'video', 'other']),
   contactedOn: z.string().min(1, 'Informe a data do contato.'),
-  gotReply: z.boolean(),
   feedback: z.string().max(1500, 'Texto muito longo.').optional(),
-  attentionLevel: z.enum(['normal', 'watch', 'leader_action']),
-  status: z.enum(['pending', 'contacted', 'awaiting_reply', 'follow_up', 'needs_attention']),
 })
 
 type FormValues = z.infer<typeof schema>
 
 /**
- * O mesmo fluxo para lider e discipulo: quem cuida registra o contato.
+ * Registro do contato da semana.
+ *
+ * Três toques: como a pessoa está, se vem ao GC, e salvar. O nível de atenção
+ * sai da primeira resposta - não é uma segunda pergunta. O resto (canal, data,
+ * uma anotação) fica recolhido, para quem precisar.
+ *
  * O feedback nunca aparece para a pessoa cuidada.
  */
 export function ContactDialog({
@@ -58,186 +73,213 @@ export function ContactDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const logContact = useLogContact()
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {open && assignment && (
+          <ContactBody assignment={assignment} onClose={() => onOpenChange(false)} />
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ContactBody({
+  assignment,
+  onClose,
+}: {
+  assignment: AssignmentWithPeople
+  onClose: () => void
+}) {
+  const log = useLogContact()
+  const [detalhes, setDetalhes] = React.useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       channel: 'whatsapp',
       contactedOn: todayISO(),
-      gotReply: true,
       feedback: '',
-      attentionLevel: 'normal',
-      status: 'contacted',
     },
   })
 
-  React.useEffect(() => {
-    if (open && assignment) {
-      form.reset({
-        channel: 'whatsapp',
-        contactedOn: todayISO(),
-        gotReply: true,
-        feedback: '',
-        attentionLevel: assignment.attention_level,
-        status: 'contacted',
-      })
-    }
-  }, [open, assignment, form])
-
-  const attention = useWatch({ control: form.control, name: 'attentionLevel' })
+  const wellBeing = useWatch({ control: form.control, name: 'wellBeing' })
 
   const onSubmit = form.handleSubmit(async (values) => {
-    if (!assignment) return
-    await logContact.mutateAsync({
+    await log.mutateAsync({
       assignmentId: assignment.id,
       channel: values.channel,
+      wellBeing: values.wellBeing,
+      comingToGc: values.comingToGc ?? null,
       contactedOn: values.contactedOn,
-      gotReply: values.gotReply,
-      feedback: values.feedback,
-      attentionLevel: values.attentionLevel,
-      status: values.status,
+      feedback: values.feedback?.trim() || null,
     })
-    onOpenChange(false)
+    onClose()
   })
 
+  const primeiroNome = assignment.cared_for.full_name.split(' ')[0]
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Marcar contato</DialogTitle>
-          <DialogDescription>
-            {assignment ? `Como foi o cuidado com ${assignment.cared_for.full_name}?` : ''}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>Como foi com {primeiroNome}?</DialogTitle>
+        <DialogDescription>Dois toques e está registrado.</DialogDescription>
+      </DialogHeader>
 
-        <form onSubmit={onSubmit} className="space-y-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Canal" required>
-              <Controller
-                control={form.control}
-                name="channel"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger aria-label="Canal do contato">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CHANNELS.map((channel) => (
-                        <SelectItem key={channel} value={channel}>
-                          {channelLabel[channel]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
+      <form onSubmit={onSubmit} className="space-y-5" noValidate>
+        <Field
+          label={`Como ${primeiroNome} está nesta semana`}
+          required
+          error={form.formState.errors.wellBeing?.message}
+        >
+          <Controller
+            control={form.control}
+            name="wellBeing"
+            render={({ field }) => (
+              <div className="grid gap-2" role="radiogroup" aria-label="Como a pessoa está">
+                {ESCALA.map((nivel) => {
+                  const escolhido = field.value === nivel
+                  return (
+                    <button
+                      key={nivel}
+                      type="button"
+                      role="radio"
+                      aria-checked={escolhido}
+                      onClick={() => field.onChange(nivel)}
+                      className={cn(
+                        'flex min-h-12 items-baseline gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors',
+                        escolhido
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'hover:bg-secondary',
+                      )}
+                    >
+                      <span className="font-medium">{wellBeingLabel[nivel]}</span>
+                      <span
+                        className={cn(
+                          'text-xs',
+                          escolhido ? 'text-primary-foreground/70' : 'text-muted-foreground',
+                        )}
+                      >
+                        {wellBeingHint[nivel]}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          />
+        </Field>
 
-            <Field
-              label="Data do contato"
-              htmlFor="contactedOn"
-              required
-              error={form.formState.errors.contactedOn?.message}
-            >
-              <Input
-                id="contactedOn"
-                type="date"
-                max={todayISO()}
-                {...form.register('contactedOn')}
-              />
-            </Field>
-          </div>
+        <Field label="Ela vem ao GC nesta semana?">
+          <Controller
+            control={form.control}
+            name="comingToGc"
+            render={({ field }) => (
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Vem ao GC">
+                {PRESENCA.map((opcao) => {
+                  const escolhido = field.value === opcao
+                  return (
+                    <button
+                      key={opcao}
+                      type="button"
+                      role="radio"
+                      aria-checked={escolhido}
+                      onClick={() => field.onChange(escolhido ? undefined : opcao)}
+                      className={cn(
+                        'min-h-12 rounded-lg border px-2 py-2 text-sm font-medium transition-colors',
+                        escolhido
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'hover:bg-secondary',
+                      )}
+                    >
+                      {gcIntentLabel[opcao]}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          />
+        </Field>
 
-          <div className="border-border flex items-center justify-between gap-3 rounded-lg border p-3">
-            <Label htmlFor="gotReply" className="cursor-pointer">
-              A pessoa respondeu?
-            </Label>
-            <Controller
-              control={form.control}
-              name="gotReply"
-              render={({ field }) => (
-                <Switch id="gotReply" checked={field.value} onCheckedChange={field.onChange} />
-              )}
-            />
-          </div>
+        {wellBeing === 'precisa_ajuda' && (
+          <Alert variant="warning">
+            <Info aria-hidden />
+            <AlertDescription>
+              A liderança recebe um aviso agora. Se for urgente, fale direto com um líder.
+            </AlertDescription>
+          </Alert>
+        )}
 
-          <Field label="Como está a situação?" required>
-            <Controller
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger aria-label="Situação do cuidado">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUSES.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {assignmentStatusLabel[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-
-          <Field label="Nível de atenção" required>
-            <Controller
-              control={form.control}
-              name="attentionLevel"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger aria-label="Nível de atenção">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ATTENTION.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {attentionLabel[level]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </Field>
-
-          {attention === 'leader_action' && (
-            <Alert variant="warning">
-              <Info aria-hidden />
-              <AlertDescription>
-                A liderança será avisada de que este cuidado precisa de atenção. O que você escrever
-                abaixo não é enviado na notificação.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Field
-            label="Feedback (opcional)"
-            htmlFor="feedback"
-            hint={FEEDBACK_PRIVACY_HINT}
-            error={form.formState.errors.feedback?.message}
+        {/* O que quase nunca muda fica recolhido: WhatsApp e hoje acertam a
+            grande maioria dos registros, e cada campo a menos na tela é um
+            registro a mais que acontece. */}
+        <div className="border-border rounded-lg border">
+          <button
+            type="button"
+            onClick={() => setDetalhes((v) => !v)}
+            className="flex min-h-12 w-full items-center justify-between px-3 py-2 text-sm font-medium"
+            aria-expanded={detalhes}
           >
-            <Textarea
-              id="feedback"
-              rows={4}
-              placeholder="Ex.: conversamos sobre a semana, combinamos de nos ver no culto."
-              {...form.register('feedback')}
+            Detalhes e anotação
+            <ChevronDown
+              className={cn('size-4 transition-transform', detalhes && 'rotate-180')}
+              aria-hidden
             />
-          </Field>
+          </button>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={logContact.isPending}>
-              Salvar contato
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          {detalhes && (
+            <div className="space-y-4 border-t p-3">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Por onde falou">
+                  <Controller
+                    control={form.control}
+                    name="channel"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger aria-label="Canal do contato">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CHANNELS.map((channel) => (
+                            <SelectItem key={channel} value={channel}>
+                              {channelLabel[channel]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+
+                <Field label="Quando" error={form.formState.errors.contactedOn?.message}>
+                  <Input type="date" max={todayISO()} {...form.register('contactedOn')} />
+                </Field>
+              </div>
+
+              <Field
+                label="Anotação"
+                hint={FEEDBACK_PRIVACY_HINT}
+                error={form.formState.errors.feedback?.message}
+              >
+                <Textarea
+                  rows={3}
+                  placeholder="Algo que a liderança precise saber. Opcional."
+                  {...form.register('feedback')}
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" loading={form.formState.isSubmitting}>
+            Registrar contato
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
   )
 }

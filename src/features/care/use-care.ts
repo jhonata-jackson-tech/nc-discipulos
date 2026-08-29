@@ -4,15 +4,15 @@ import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
 import { startOfWeek } from '@/lib/date'
 import type {
-  AssignmentStatus,
-  AttentionLevel,
   CareAssignment,
   CareWeek,
   ContactChannel,
   ContactLog,
+  GcIntent,
   Profile,
   TransferRequest,
   WeekSummary,
+  WellBeing,
 } from '@/types/database'
 
 export interface AssignmentWithPeople extends CareAssignment {
@@ -115,11 +115,11 @@ export function useContactLogs(assignmentId: string | undefined) {
 export interface LogContactInput {
   assignmentId: string
   channel: ContactChannel
+  /** Como a pessoa está. Daqui sai o nível de atenção, no banco. */
+  wellBeing: WellBeing
+  comingToGc?: GcIntent | null
   contactedOn: string
-  gotReply: boolean
-  feedback?: string
-  attentionLevel: AttentionLevel
-  status: AssignmentStatus
+  feedback?: string | null
 }
 
 export function useLogContact() {
@@ -129,11 +129,10 @@ export function useLogContact() {
       const { error } = await db.rpc('log_contact', {
         p_assignment_id: input.assignmentId,
         p_channel: input.channel,
-        p_contacted_on: input.contactedOn,
-        p_got_reply: input.gotReply,
+        p_well_being: input.wellBeing,
+        p_coming_to_gc: input.comingToGc ?? null,
         p_feedback: input.feedback ?? null,
-        p_attention_level: input.attentionLevel,
-        p_status: input.status,
+        p_contacted_on: input.contactedOn,
       })
       if (error) throw error
     },

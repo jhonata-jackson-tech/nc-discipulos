@@ -79,9 +79,12 @@ test.describe('registro de contato', () => {
     const card = page.getByRole('group', { name: `Cuidado de ${nameOf('memberB')}` })
     await card.getByRole('button', { name: /Marcar contato|Registrar novo contato/ }).click()
 
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await page.getByLabel('Feedback (opcional)').fill('Conversamos sobre a semana.')
-    await page.getByRole('button', { name: 'Salvar contato' }).click()
+    // Dois toques: como a pessoa está e se vem ao GC.
+    const dialogo = page.getByRole('dialog')
+    await expect(dialogo).toBeVisible()
+    await dialogo.getByRole('radio', { name: /Bem/ }).first().click()
+    await dialogo.getByRole('radio', { name: 'Vem ao GC' }).click()
+    await dialogo.getByRole('button', { name: 'Registrar contato' }).click()
 
     await expect(page.getByText('Contato registrado. Obrigado por cuidar.')).toBeVisible()
     await expect(page.getByText('Contato realizado').first()).toBeVisible()
@@ -94,14 +97,32 @@ test.describe('registro de contato', () => {
       const card = page.getByRole('group', { name: `Cuidado de ${person}` })
       await card.getByRole('button', { name: /Marcar contato|Registrar novo contato/ }).click()
 
-      await expect(page.getByRole('dialog')).toBeVisible()
-      await page.getByLabel('Feedback (opcional)').fill(`Contato com ${person}.`)
-      await page.getByRole('button', { name: 'Salvar contato' }).click()
+      const dialogo = page.getByRole('dialog')
+      await expect(dialogo).toBeVisible()
+      await dialogo.getByRole('radio', { name: /Seguindo/ }).click()
+      await dialogo.getByRole('button', { name: 'Registrar contato' }).click()
       await expect(page.getByRole('dialog')).toBeHidden()
     }
 
     // O progresso do líder conta os dois: discipulado e rodízio.
     await expect(page.getByText('2 de 2')).toBeVisible()
+  })
+})
+
+test.describe('o termômetro', () => {
+  test('"precisa de ajuda" acende o alerta sem perguntar de novo', async ({ page }) => {
+    await signIn(page, 'disciple')
+
+    const card = page.getByRole('group', { name: `Cuidado de ${nameOf('memberB')}` })
+    await card.getByRole('button', { name: /Marcar contato|Registrar novo contato/ }).click()
+
+    const dialogo = page.getByRole('dialog')
+    await dialogo.getByRole('radio', { name: /Precisa de ajuda/ }).click()
+    await expect(dialogo.getByText('A liderança recebe um aviso agora.')).toBeVisible()
+    await dialogo.getByRole('button', { name: 'Registrar contato' }).click()
+
+    await expect(page.getByText('Contato registrado. Obrigado por cuidar.')).toBeVisible()
+    await expect(page.getByText('Liderança precisa agir').first()).toBeVisible()
   })
 })
 

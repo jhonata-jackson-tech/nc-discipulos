@@ -62,4 +62,10 @@ else
   echo "[migrate] $integrantes integrantes ja cadastrados: seed nao roda"
 fi
 
+# O PostgREST guarda o desenho do schema em memoria. Sem este aviso, uma
+# funcao com assinatura nova responde "nao encontrada" ate alguem reiniciar o
+# container - e o erro aparece na tela de quem esta usando, nao aqui.
+echo "[migrate] avisando o PostgREST para reler o schema"
+psql -c "notify pgrst, 'reload schema';"
+
 echo "[migrate] pronto"

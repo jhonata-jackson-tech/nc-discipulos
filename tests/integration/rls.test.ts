@@ -206,24 +206,63 @@ describe.skipIf(!hasBackend)('permissoes e regras no banco', () => {
     const intruder = await otherMember.client.rpc('log_contact', {
       p_assignment_id: assignmentId,
       p_channel: 'whatsapp',
+      p_well_being: 'bem',
       p_contacted_on: '2026-08-25',
-      p_got_reply: true,
-      p_feedback: null,
-      p_attention_level: 'normal',
-      p_status: 'contacted',
     })
     expect(intruder.error).not.toBeNull()
 
     const caregiver = await disciple.client.rpc('log_contact', {
       p_assignment_id: assignmentId,
       p_channel: 'call',
-      p_contacted_on: '2026-08-25',
-      p_got_reply: true,
+      p_well_being: 'bem',
+      p_coming_to_gc: 'vem',
       p_feedback: 'conversa boa',
-      p_attention_level: 'normal',
-      p_status: 'contacted',
+      p_contacted_on: '2026-08-25',
     })
     expect(caregiver.error).toBeNull()
+  })
+
+  it('deriva o nivel de atencao de como a pessoa esta', async () => {
+    const { data: alvo } = await admin
+      .from('care_assignments')
+      .insert({
+        week_id: weekId,
+        caregiver_id: disciple.profileId,
+        cared_for_id: otherMember.profileId,
+        origin: 'rotation',
+      })
+      .select()
+      .single()
+
+    // "Precisa de ajuda" tem que acender o alerta da lideranca sozinho - sem
+    // uma segunda pergunta a quem esta registrando.
+    const { error } = await disciple.client.rpc('log_contact', {
+      p_assignment_id: alvo!.id,
+      p_channel: 'whatsapp',
+      p_well_being: 'precisa_ajuda',
+    })
+    expect(error).toBeNull()
+
+    const { data: depois } = await admin
+      .from('care_assignments')
+      .select('attention_level, status')
+      .eq('id', alvo!.id)
+      .single()
+    expect(depois!.attention_level).toBe('leader_action')
+
+    // Sem resposta nao e cuidado concluido: continua aguardando.
+    await disciple.client.rpc('log_contact', {
+      p_assignment_id: alvo!.id,
+      p_channel: 'whatsapp',
+      p_well_being: 'sem_resposta',
+    })
+    const { data: semResposta } = await admin
+      .from('care_assignments')
+      .select('attention_level, status')
+      .eq('id', alvo!.id)
+      .single()
+    expect(semResposta!.status).toBe('awaiting_reply')
+    expect(semResposta!.attention_level).toBe('watch')
   })
 
   it('permite ao lider registrar o cuidado dos proprios discipulos', async () => {
@@ -241,11 +280,9 @@ describe.skipIf(!hasBackend)('permissoes e regras no banco', () => {
     const { error } = await leader.client.rpc('log_contact', {
       p_assignment_id: own!.id,
       p_channel: 'in_person',
-      p_contacted_on: '2026-08-25',
-      p_got_reply: true,
+      p_well_being: 'seguindo',
       p_feedback: 'acompanhamento do discipulado',
-      p_attention_level: 'normal',
-      p_status: 'contacted',
+      p_contacted_on: '2026-08-25',
     })
     expect(error).toBeNull()
   })

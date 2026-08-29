@@ -69,6 +69,9 @@ export interface Profile {
   id: string
   user_id: string | null
   full_name: string
+  /** Como a pessoa quer ser chamada. Vazio: usa o primeiro nome. */
+  display_name: string | null
+  photo_url: string | null
   email: string | null
   phone: string | null
   birth_date: string | null
@@ -259,4 +262,16 @@ export interface WeekSummary {
     total: number
     done: number
   }[]
+}
+
+
+/** Números do próprio esforço, para a tela de perfil. Nunca um ranking. */
+export interface MeuPerfil {
+  grupo: { nome: string | null; lideres: string[] }
+  semana: { feitos: number; total: number }
+  historico: {
+    cuidadosRegistrados: number
+    pessoasCuidadas: number
+    semanasSeguidas: number
+  }
 }

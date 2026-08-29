@@ -10,6 +10,8 @@ function profile(overrides: Partial<Profile> = {}): Profile {
     id: 'p1',
     user_id: null,
     full_name: 'Ana Flávia',
+    display_name: null,
+    photo_url: null,
     email: null,
     phone: null,
     birth_date: null,

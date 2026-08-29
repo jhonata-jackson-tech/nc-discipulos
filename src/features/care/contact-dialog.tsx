@@ -7,6 +7,7 @@ import { todayISO } from '@/lib/date'
 import {
   FEEDBACK_PRIVACY_HINT,
   channelLabel,
+  comoChamar,
   gcIntentLabel,
   wellBeingHint,
   wellBeingLabel,
@@ -117,7 +118,7 @@ function ContactBody({
     onClose()
   })
 
-  const primeiroNome = assignment.cared_for.full_name.split(' ')[0]
+  const primeiroNome = comoChamar(assignment.cared_for)
 
   return (
     <>

@@ -10,7 +10,12 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useSession } from '@/features/auth/session-context'
-import { useAssignments, useWeeks } from '@/features/care/use-care'
+import {
+  useAssignments,
+  useReassignCare,
+  useWeeks,
+  type AssignmentWithPeople,
+} from '@/features/care/use-care'
 import { useActiveMembers } from '@/features/members/use-members'
 import {
   useCloseWeek,
@@ -24,6 +29,16 @@ import { PageHeader } from '@/components/common/page-header'
 import { WeekStatusBadge } from '@/components/common/badges'
 import { CardListSkeleton } from '@/components/common/states'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Field } from '@/components/ui/field'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,6 +70,11 @@ export function DistributionPage() {
   const [chosenWeekId, setChosenWeekId] = React.useState<string | null>(null)
 
   // O rascunho em aberto e o ponto de partida natural desta tela.
+  const reassign = useReassignCare()
+  const [remanejando, setRemanejando] = React.useState<{
+    assignment: AssignmentWithPeople
+    caregiverId: string
+  } | null>(null)
   const defaultWeek = weeks.data?.find((item) => item.status === 'draft') ?? weeks.data?.[0]
   const selectedWeekId = chosenWeekId ?? defaultWeek?.id ?? ''
   const week = weeks.data?.find((item) => item.id === selectedWeekId) ?? null
@@ -224,8 +244,28 @@ export function DistributionPage() {
           onMove={(caredForId, caregiverId) =>
             setDraftAssignment.mutate({ weekId: week.id, caredForId, caregiverId })
           }
+          onReassign={(assignment, caregiverId) =>
+            setRemanejando({ assignment, caregiverId })
+          }
         />
       )}
+
+      <RemanejarDialog
+        pedido={remanejando}
+        onClose={() => setRemanejando(null)}
+        onConfirmar={(motivo) => {
+          if (!remanejando) return
+          reassign.mutate(
+            {
+              assignmentId: remanejando.assignment.id,
+              newCaregiverId: remanejando.caregiverId,
+              reason: motivo,
+            },
+            { onSuccess: () => setRemanejando(null) },
+          )
+        }}
+        enviando={reassign.isPending}
+      />
     </div>
   )
 }
@@ -280,5 +320,64 @@ function PoolCard({ pool }: { pool: PoolReportRow }) {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+
+/**
+ * Remanejar um cuidado de semana já publicada.
+ *
+ * A semana publicada já está no celular de todo mundo: alguém já viu que ia
+ * cuidar de alguém. Trocar sem dizer por quê seria puxar o tapete — por isso
+ * o motivo é exigido e fica no histórico, e as duas pessoas envolvidas são
+ * avisadas. Em rascunho nada disso é necessário: ali ainda é planejamento.
+ */
+function RemanejarDialog({
+  pedido,
+  onClose,
+  onConfirmar,
+  enviando,
+}: {
+  pedido: { assignment: AssignmentWithPeople; caregiverId: string } | null
+  onClose: () => void
+  onConfirmar: (motivo: string) => void
+  enviando: boolean
+}) {
+  const [motivo, setMotivo] = React.useState('')
+
+  return (
+    <Dialog open={Boolean(pedido)} onOpenChange={(aberto) => !aberto && onClose()}>
+      <DialogContent key={pedido?.assignment.id}>
+        <DialogHeader>
+          <DialogTitle>Remanejar cuidado</DialogTitle>
+          <DialogDescription>
+            O cuidado de {pedido?.assignment.cared_for.full_name} passa para outra pessoa. Esta
+            semana já foi publicada — as duas pessoas serão avisadas.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Field label="Motivo" required>
+          <Textarea
+            rows={3}
+            value={motivo}
+            onChange={(evento) => setMotivo(evento.target.value)}
+            placeholder="Ex.: o responsável está viajando esta semana."
+          />
+        </Field>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={motivo.trim().length < 3}
+            loading={enviando}
+            onClick={() => onConfirmar(motivo.trim())}
+          >
+            Remanejar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

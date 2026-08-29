@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CalendarRange,
   HeartHandshake,
   House,
@@ -62,6 +63,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Users,
     roles: ['leader', 'supervisor'],
     description: 'Cadastro, convites e discipulado',
+  },
+  {
+    to: '/relatorios',
+    label: 'Relatórios',
+    icon: BarChart3,
+    roles: ['leader', 'supervisor'],
+    description: 'Como o GC está indo, semana a semana',
   },
   {
     to: '/supervisao',

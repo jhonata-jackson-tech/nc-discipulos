@@ -9,6 +9,7 @@ const ROTAS = [
   { path: '/atividades', nome: 'Atividades' },
   { path: '/distribuicao', nome: 'Distribuição' },
   { path: '/integrantes', nome: 'Integrantes' },
+  { path: '/relatorios', nome: 'Relatórios' },
   { path: '/supervisao', nome: 'Supervisão' },
   { path: '/agenda', nome: 'Semanas' },
   { path: '/configuracoes', nome: 'Configurações' },

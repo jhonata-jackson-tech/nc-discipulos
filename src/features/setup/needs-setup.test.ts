@@ -10,6 +10,8 @@ function pessoa(overrides: Partial<Profile> = {}): Profile {
     id: 'p1',
     user_id: null,
     full_name: 'Alguém',
+    display_name: null,
+    photo_url: null,
     email: null,
     phone: null,
     birth_date: null,

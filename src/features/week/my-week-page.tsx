@@ -18,7 +18,9 @@ import { CareCard } from '@/features/care/care-card'
 import { useActivities } from '@/features/activities/use-activities'
 import { useActiveMembers } from '@/features/members/use-members'
 import { birthdayInWindow, formatDate, formatWeekRange } from '@/lib/date'
-import { firstName, pluralize } from '@/lib/utils'
+import { pluralize } from '@/lib/utils'
+import { comoChamar } from '@/lib/labels'
+import { Constancia } from './constancia'
 import { PageHeader } from '@/components/common/page-header'
 import { StatTile } from '@/components/common/stat-tile'
 import { CardListSkeleton, ErrorState, StatsSkeleton } from '@/components/common/states'
@@ -99,7 +101,7 @@ export function MyWeekPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${greeting()}, ${firstName(profile?.full_name ?? '')}`}
+        title={`${greeting()}, ${profile ? comoChamar(profile) : ''}`}
         description={
           week.data
             ? `Semana de ${formatWeekRange(week.data.starts_on, week.data.ends_on)}`
@@ -201,6 +203,8 @@ export function MyWeekPage() {
                 Você falou com todo mundo desta semana. Obrigado!
               </p>
             )}
+
+            <Constancia />
           </CardContent>
         </Card>
       )}
@@ -295,7 +299,7 @@ export function MyWeekPage() {
                   Com{' '}
                   {activity.assignees
                     .filter((entry) => entry.profile.id !== profile?.id)
-                    .map((entry) => firstName(entry.profile.full_name))
+                    .map((entry) => comoChamar(entry.profile))
                     .join(', ')}
                 </p>
               )}

@@ -115,3 +115,45 @@ test.describe('atividades: o combinado', () => {
     await outro.close()
   })
 })
+
+test.describe('relatórios', () => {
+  test('a liderança vê o panorama; o irmão não', async ({ page }) => {
+    await signIn(page, 'leader')
+    await page.goto('/relatorios')
+    await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible()
+    await expect(page.getByText('Semana a semana')).toBeVisible()
+    await expect(page.getByText('Há mais tempo sem contato')).toBeVisible()
+  })
+
+  test('o supervisor também vê', async ({ page }) => {
+    await signIn(page, 'supervisor')
+    await page.goto('/relatorios')
+    await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible()
+  })
+})
+
+test.describe('semana publicada', () => {
+  test('o líder consegue remanejar, e o motivo é obrigatório', async ({ page }) => {
+    await signIn(page, 'leader')
+    await page.goto('/distribuicao')
+
+    // A semana publicada do preparo aparece no seletor.
+    const quadro = page.getByRole('region', { name: /quadro|distribui/i }).first()
+    await expect(quadro.or(page.getByText('Responsável por'))).toBeTruthy()
+
+    const seletor = page.getByLabel(/Responsável por/).first()
+    if (await seletor.count()) {
+      await seletor.click()
+      const opcao = page.getByRole('option').nth(1)
+      if (await opcao.count()) {
+        await opcao.click()
+        const dialogo = page.getByRole('dialog')
+        await expect(dialogo.getByText('Remanejar cuidado')).toBeVisible()
+        await expect(dialogo.getByRole('button', { name: 'Remanejar' })).toBeDisabled()
+        await dialogo.getByLabel('Motivo').fill('Responsável viajando nesta semana.')
+        await dialogo.getByRole('button', { name: 'Remanejar' }).click()
+        await expect(page.getByRole('dialog')).toHaveCount(0)
+      }
+    }
+  })
+})

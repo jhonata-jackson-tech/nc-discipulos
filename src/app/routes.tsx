@@ -33,6 +33,9 @@ const MembersPage = lazy(() =>
 const SupervisionPage = lazy(() =>
   import('@/features/supervision/supervision-page').then((m) => ({ default: m.SupervisionPage })),
 )
+const ReportsPage = lazy(() =>
+  import('@/features/reports/reports-page').then((m) => ({ default: m.ReportsPage })),
+)
 const NotificationsPage = lazy(() =>
   import('@/features/notifications/notifications-page').then((m) => ({
     default: m.NotificationsPage,
@@ -111,6 +114,7 @@ export const router = createBrowserRouter([
                     element: <RequireRole roles={['leader', 'supervisor']} />,
                     children: [
                       { path: '/integrantes', element: <MembersPage /> },
+                      { path: '/relatorios', element: <ReportsPage /> },
                       { path: '/agenda', element: <WeeksPage /> },
                     ],
                   },

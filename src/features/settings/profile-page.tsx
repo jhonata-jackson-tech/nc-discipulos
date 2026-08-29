@@ -12,6 +12,7 @@ import { useSession } from '@/features/auth/session-context'
 import { useUpdateMember } from '@/features/members/use-members'
 import { careGenderLabel, roleLabelFor } from '@/lib/labels'
 import { PageHeader } from '@/components/common/page-header'
+import { MeusNumeros } from './meus-numeros'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 
 const schema = z.object({
   full_name: z.string().trim().min(2, 'Informe seu nome.'),
+  display_name: z.string().trim().max(40, 'Nome muito longo.').optional(),
   phone: z.string().optional(),
   birth_date: z.string().optional(),
 })
@@ -42,13 +44,14 @@ export function ProfilePage() {
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { full_name: '', phone: '', birth_date: '' },
+    defaultValues: { full_name: '', display_name: '', phone: '', birth_date: '' },
   })
 
   React.useEffect(() => {
     if (profile) {
       form.reset({
         full_name: profile.full_name,
+        display_name: profile.display_name ?? '',
         phone: profile.phone ?? '',
         birth_date: profile.birth_date ?? '',
       })
@@ -60,6 +63,7 @@ export function ProfilePage() {
     await update.mutateAsync({
       id: profile.id,
       full_name: values.full_name,
+      display_name: values.display_name || null,
       phone: values.phone || null,
       birth_date: values.birth_date || null,
     })
@@ -71,6 +75,8 @@ export function ProfilePage() {
         title="Meus dados"
         description="Mantenha seu contato e aniversário atualizados."
       />
+
+      <MeusNumeros />
 
       <Card className="max-w-xl">
         <CardHeader>
@@ -88,6 +94,15 @@ export function ProfilePage() {
               error={form.formState.errors.full_name?.message}
             >
               <Input id="full_name" {...form.register('full_name')} />
+            </Field>
+
+            <Field
+              label="Como você quer ser chamado"
+              htmlFor="display_name"
+              hint="É esse nome que aparece nas telas e nos avisos. Vazio, usamos o primeiro nome."
+              error={form.formState.errors.display_name?.message}
+            >
+              <Input id="display_name" placeholder={profile?.full_name.split(' ')[0]} {...form.register('display_name')} />
             </Field>
 
             <Field label="Telefone" htmlFor="phone">

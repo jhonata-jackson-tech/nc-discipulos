@@ -169,3 +169,15 @@ export const urgencyLabel: Record<SupervisionUrgency, string> = {
 export const FEEDBACK_PRIVACY_HINT =
   'Escreva o suficiente para cuidar bem. Não registre confissões, diagnósticos, ' +
   'documentos ou detalhes íntimos.'
+
+
+/**
+ * Como chamar alguém nas telas.
+ *
+ * Espelha `public.display_name` do banco: sem escolha, o primeiro nome. Ter a
+ * regra nos dois lugares evita a tela dizer "Jhonata Jackson Monteiro Motta"
+ * enquanto o aviso diz "Jhonata".
+ */
+export function comoChamar(pessoa: { display_name?: string | null; full_name: string }): string {
+  return pessoa.display_name?.trim() || pessoa.full_name.trim().split(' ')[0]!
+}

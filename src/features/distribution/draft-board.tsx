@@ -17,6 +17,12 @@ interface DraftBoardProps {
   assignments: AssignmentWithPeople[]
   loading: boolean
   onMove: (caredForId: string, caregiverId: string) => void
+  /**
+   * Reorganizar uma semana já publicada. Vem separado de `onMove` porque não é
+   * a mesma operação: a semana publicada já foi para o celular de todo mundo,
+   * então a troca exige justificativa e fica registrada.
+   */
+  onReassign?: (assignment: AssignmentWithPeople, caregiverId: string) => void
 }
 
 /**
@@ -26,12 +32,26 @@ interface DraftBoardProps {
  * A lista de destinos e sempre restrita ao mesmo genero de cuidado - e o banco
  * recusa qualquer tentativa que passe por cima disso.
  */
-export function DraftBoard({ week, assignments, loading, onMove }: DraftBoardProps) {
+export function DraftBoard({
+  week,
+  assignments,
+  loading,
+  onMove,
+  onReassign,
+}: DraftBoardProps) {
   const { data: members } = useActiveMembers()
   const [dragging, setDragging] = React.useState<AssignmentWithPeople | null>(null)
   const [hovered, setHovered] = React.useState<string | null>(null)
 
-  const editable = week.status === 'draft'
+  const rascunho = week.status === 'draft'
+  const publicada = week.status === 'published'
+  // Publicada também se reorganiza — o caminho é outro, com justificativa.
+  const editable = rascunho || (publicada && Boolean(onReassign))
+
+  const mover = (assignment: AssignmentWithPeople, caregiverId: string) => {
+    if (rascunho) return onMove(assignment.cared_for.id, caregiverId)
+    onReassign?.(assignment, caregiverId)
+  }
 
   const caregivers = React.useMemo(() => {
     const ids = new Set(assignments.map((assignment) => assignment.caregiver_id))
@@ -77,7 +97,7 @@ export function DraftBoard({ week, assignments, loading, onMove }: DraftBoardPro
     const target = caregivers.find((person) => person.id === caregiverId)
     if (target?.care_gender !== dragging.cared_for.care_gender) return
 
-    onMove(dragging.cared_for_id, caregiverId)
+    mover(dragging, caregiverId)
     setDragging(null)
   }
 
@@ -167,7 +187,7 @@ export function DraftBoard({ week, assignments, loading, onMove }: DraftBoardPro
                     {editable && (
                       <Select
                         value={assignment.caregiver_id}
-                        onValueChange={(value) => onMove(assignment.cared_for_id, value)}
+                        onValueChange={(value) => mover(assignment, value)}
                       >
                         <SelectTrigger
                           className="mt-2 h-9 text-xs"

@@ -480,10 +480,28 @@ npx playwright install --with-deps
 
 ### Instalar como app
 
-O manifest e o service worker são gerados no build. Para instalar:
+O manifest e o service worker são gerados no build.
 
-- **Android/Chrome** — abra o site e use *Instalar app* (ou o menu ⋮ → *Adicionar à tela inicial*).
-- **iPhone/Safari** — toque em **Compartilhar** → **Adicionar à Tela de Início**.
+**iPhone — precisa ser pelo Safari.** O Chrome no iPhone não instala PWA.
+
+1. Abra o endereço no **Safari**.
+2. Toque no botão **Compartilhar** (o quadrado com a seta para cima, na barra
+   de baixo).
+3. Role a lista e toque em **Adicionar à Tela de Início**.
+4. Confirme em **Adicionar**, no canto superior direito.
+5. Abra pelo ícone novo — o app roda em tela cheia, sem a barra do navegador.
+
+**Android — pelo Chrome.**
+
+1. Abra o endereço no **Chrome**.
+2. Toque nos três pontinhos (**⋮**) no canto superior direito.
+3. Toque em **Instalar app** (ou *Adicionar à tela inicial*).
+4. Confirme em **Instalar**.
+5. Abra pelo ícone novo.
+
+Depois de instalar, em **Notificações** ligue *Avisar neste aparelho*. No iPhone
+essa opção só funciona depois da instalação — é limitação do Safari, e a tela
+explica isso em vez de mostrar um botão que não funcionaria.
 
 Os ícones saem de `node scripts/generate-icons.mjs`, a partir da marca guardada
 em `scripts/marca.mask.mjs` — a imagem enviada pela liderança, recortada e

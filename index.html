@@ -33,6 +33,22 @@
               .querySelector('meta[name="theme-color"]')
               .setAttribute('content', '#1c1c1c')
           }
+
+          // Instalado na tela de inicio, o zoom de pinca fica travado: e o que
+          // faz parecer aplicativo, e nao pagina. Na aba do navegador ele
+          // continua liberado - quem precisa aumentar para ler nao perde isso.
+          // A ampliacao do proprio sistema (iOS/Android) funciona nos dois.
+          var instalado =
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true
+          if (instalado) {
+            document
+              .querySelector('meta[name="viewport"]')
+              .setAttribute(
+                'content',
+                'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
+              )
+          }
         } catch (e) {
           // Sem armazenamento: fica no tema claro.
         }

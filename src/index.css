@@ -176,6 +176,9 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Sem o zoom de duplo-toque: ele atrasa todo toque em ~300ms e faz o app
+       responder com meio segundo de atraso, o que parece lentidao. */
+    touch-action: manipulation;
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;
     overscroll-behavior-y: none;

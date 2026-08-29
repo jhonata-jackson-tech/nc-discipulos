@@ -499,6 +499,17 @@ O manifest e o service worker são gerados no build.
 4. Confirme em **Instalar**.
 5. Abra pelo ícone novo.
 
+Instalado, o app trava o zoom de pinça — é o que faz parecer aplicativo, e não
+página. Na aba do navegador o zoom continua liberado, e a ampliação do próprio
+sistema (iOS/Android) funciona nos dois casos.
+
+> 🪤 Os campos usam 16px no celular. Abaixo disso o Safari do iPhone dá zoom
+> sozinho quando o campo recebe foco — e não desfaz. O layout parece quebrado e
+> a causa fica escondida no tamanho da fonte.
+
+Versão nova assume sozinha: quando o service worker troca, a página recarrega.
+Num grupo de 33 pessoas ninguém vai limpar cache.
+
 Depois de instalar, em **Notificações** ligue *Avisar neste aparelho*. No iPhone
 essa opção só funciona depois da instalação — é limitação do Safari, e a tela
 explica isso em vez de mostrar um botão que não funcionaria.

@@ -181,7 +181,7 @@ export function ActivityDialog({
             <Input id="dueAt" type="datetime-local" {...form.register('dueAt')} />
           </Field>
 
-          <Field label="Responsáveis" hint="As atividades ficam com os discípulos do GC.">
+          <Field label="Responsáveis" hint="Discípulos e liderança. Quem for indicado precisa aceitar.">
             <Controller
               control={form.control}
               name="assigneeIds"

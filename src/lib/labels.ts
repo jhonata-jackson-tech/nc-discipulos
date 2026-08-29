@@ -5,6 +5,7 @@
  * "precisa de atencao" no lugar de codigos tecnicos.
  */
 import type {
+  ActivityResponse,
   ActivityStatus,
   ActivityType,
   AppRole,
@@ -111,6 +112,12 @@ export const gcIntentLabel: Record<GcIntent, string> = {
   vem: 'Vem ao GC',
   nao_vem: 'Não vem',
   nao_sabe: 'Ainda não sabe',
+}
+
+export const activityResponseLabel: Record<ActivityResponse, string> = {
+  pendente: 'Aguardando resposta',
+  aceita: 'Aceitou',
+  recusada: 'Recusou',
 }
 
 export const channelLabel: Record<ContactChannel, string> = {

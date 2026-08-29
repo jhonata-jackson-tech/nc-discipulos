@@ -40,6 +40,15 @@ export type ContactChannel = 'whatsapp' | 'call' | 'in_person' | 'message' | 'vi
 export type TransferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
 
 export type ActivityType = 'talk' | 'snack' | 'dynamic' | 'birthdays' | 'other'
+/**
+ * A única resposta que importa numa atividade: quem foi indicado topou?
+ *
+ * Substitui a antiga situação ("a fazer", "em andamento"), que descrevia a
+ * atividade e não o combinado - a liderança indicava alguém e ficava sem saber
+ * se a pessoa viu, se pode, se topou.
+ */
+export type ActivityResponse = 'pendente' | 'aceita' | 'recusada'
+
 export type ActivityStatus = 'todo' | 'in_progress' | 'done' | 'cancelled'
 
 export type SupervisionStatus = 'requested' | 'seen' | 'scheduled' | 'done' | 'cancelled'

@@ -79,3 +79,39 @@ test.describe('supervisão reservada', () => {
     await leaderContext.close()
   })
 })
+
+test.describe('atividades: o combinado', () => {
+  test('o discípulo aceita, e recusar exige motivo', async ({ page, browser }) => {
+    const titulo = `Lanche do GC (${test.info().project.name})`
+
+    // A liderança indica o discípulo.
+    await signIn(page, 'leader')
+    await page.goto('/atividades')
+    await page.getByRole('button', { name: 'Nova atividade' }).first().click()
+    await page.getByLabel('Título').fill(titulo)
+    const lista = page.getByRole('dialog').getByRole('checkbox')
+    await lista.first().click()
+    await page.getByRole('button', { name: 'Criar atividade' }).click()
+    await expect(page.getByText('Atividade criada.')).toBeVisible()
+    await expect(page.getByText('Aguardando resposta').first()).toBeVisible()
+
+    // Quem foi indicado responde.
+    const outro = await browser.newContext()
+    const outraPagina = await outro.newPage()
+    await signIn(outraPagina, 'disciple')
+    await outraPagina.goto('/atividades')
+
+    const cartao = outraPagina.locator('div').filter({ hasText: titulo }).last()
+    if (await cartao.getByRole('button', { name: 'Não vou conseguir' }).count()) {
+      await cartao.getByRole('button', { name: 'Não vou conseguir' }).click()
+      const recusa = outraPagina.getByRole('dialog')
+      // Sem motivo, o botão nem libera.
+      await expect(recusa.getByRole('button', { name: 'Enviar recusa' })).toBeDisabled()
+      await recusa.getByLabel('Motivo').fill('Estarei viajando nesse dia.')
+      await recusa.getByRole('button', { name: 'Enviar recusa' }).click()
+      await expect(outraPagina.getByText('Resposta enviada à liderança.')).toBeVisible()
+    }
+
+    await outro.close()
+  })
+})

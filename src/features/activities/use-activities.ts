@@ -1,14 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { db } from '@/lib/db'
+import { friendlyError } from '@/lib/errors'
 import { useSession } from '@/features/auth/session-context'
-import type { Activity, ActivityStatus, ActivityType, Profile } from '@/types/database'
+import type { Activity, ActivityResponse, ActivityStatus, ActivityType, Profile } from '@/types/database'
 
 export interface ActivityWithAssignees extends Activity {
-  assignees: { profile: Profile }[]
+  assignees: {
+    profile: Profile
+    response: ActivityResponse
+    justification: string | null
+  }[]
 }
 
-const ACTIVITY_SELECT = '*, assignees:activity_assignees(profile:profiles(*))'
+const ACTIVITY_SELECT =
+  '*, assignees:activity_assignees(response, justification, profile:profiles(*))'
 
 export function useActivities(weekId?: string | null) {
   const { group } = useSession()
@@ -65,6 +71,34 @@ export function useSaveActivity() {
       queryClient.invalidateQueries({ queryKey: ['activities'] })
       toast.success(variables.id ? 'Atividade atualizada.' : 'Atividade criada.')
     },
+  })
+}
+
+/** Aceitar ou recusar. Recusa sem motivo o banco não deixa passar. */
+export function useRespondActivity() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      accept,
+      justification,
+    }: {
+      id: string
+      accept: boolean
+      justification?: string
+    }) => {
+      const { error } = await db.rpc('respond_activity', {
+        p_activity_id: id,
+        p_accept: accept,
+        p_justification: justification ?? null,
+      })
+      if (error) throw error
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] })
+      toast.success(variables.accept ? 'Atividade aceita.' : 'Resposta enviada à liderança.')
+    },
+    onError: (error) => toast.error(friendlyError(error)),
   })
 }
 

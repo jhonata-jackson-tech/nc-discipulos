@@ -43,17 +43,19 @@ export function useActiveMembers() {
 }
 
 /**
- * Quem executa as atividades do GC.
+ * Quem executa as atividades do GC: os discipulos e a lideranca.
  *
- * As atividades da semana - a palavra, o lanche, a dinamica, os aniversarios -
- * sao trabalho dos discipulos, nao do GC inteiro. Oferecer a lista completa
- * transformava a escolha em uma cacada entre 33 nomes.
+ * A palavra, o lanche, a dinamica - e trabalho da equipe que conduz o GC, nao
+ * do grupo inteiro. Oferecer os 33 nomes transformava a escolha numa cacada;
+ * deixar so os discipulos de fora a lideranca, que tambem assume atividade.
  */
 export function useDisciples() {
   const query = useMembers()
   return {
     ...query,
-    data: query.data?.filter((p) => p.status === 'active' && p.role === 'disciple'),
+    data: query.data?.filter(
+      (p) => p.status === 'active' && (p.role === 'disciple' || p.role === 'leader'),
+    ),
   }
 }
 

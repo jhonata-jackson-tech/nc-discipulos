@@ -43,9 +43,10 @@ test.describe('devocionais', () => {
   test('o administrador publica, e quem alcança recebe e responde', async ({ page, browser }) => {
     const titulo = await publicar(page, 'Todo o GC', randomUUID().slice(0, 6))
 
-    // Quem publicou não recebe aviso do próprio gesto.
+    // Quem publica também recebe: o texto é de outra pessoa, e quem apertou o
+    // botão repassou - também é leitor.
     await page.goto('/notificacoes')
-    await expect(page.getByText(titulo)).toHaveCount(0)
+    await expect(page.getByText(titulo)).toBeVisible()
 
     const outro = await browser.newContext()
     const outraPagina = await outro.newPage()

@@ -1,6 +1,6 @@
 import * as React from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
-import { Bell, LogOut, MoreHorizontal, User } from 'lucide-react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Bell, LogOut, MoreHorizontal, Settings, User } from 'lucide-react'
 import { useSession } from '@/features/auth/session-context'
 import { useUnreadCount } from '@/features/notifications/use-notifications'
 import { navFor } from '@/app/navigation'
@@ -38,6 +38,21 @@ export function AppShell() {
   const secondary = items.filter((item) => !primary.includes(item))
   const unread = useUnreadCount()
   const [moreOpen, setMoreOpen] = React.useState(false)
+  const conteudo = React.useRef<HTMLElement>(null)
+  const { pathname } = useLocation()
+
+  /**
+   * Toda tela comeca do comeco.
+   *
+   * Quem rola nao e o documento, e esta area - entao trocar de rota nao
+   * reposiciona nada sozinho, e a tela seguinte nascia no meio, exatamente
+   * onde a anterior tinha parado. `useLayoutEffect` corrige antes de pintar,
+   * senao da para ver o salto. `behavior: 'auto'` vence o `scroll-behavior:
+   * smooth` do documento: aqui nao e uma rolagem, e o ponto de partida.
+   */
+  React.useLayoutEffect(() => {
+    conteudo.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [pathname])
 
   return (
     // A altura e travada na do visor e a rolagem acontece **dentro** do
@@ -123,7 +138,10 @@ export function AppShell() {
 
         {/* O unico lugar que rola. `overscroll-contain` impede que o gesto
             vaze para a pagina de tras quando a lista chega ao fim. */}
-        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+        <main
+          ref={conteudo}
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+        >
           <div className="mx-auto w-full max-w-6xl px-4 pt-5 pb-28 lg:px-8 lg:pt-8 lg:pb-12">
             <Outlet />
           </div>
@@ -278,10 +296,19 @@ function ProfileMenu({
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>{profile?.full_name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {/* Ver e mexer sao gestos diferentes: o perfil mostra, as
+            configuracoes alteram. Juntos, a pessoa entrava para conferir o
+            proprio telefone e caia num formulario. */}
         <DropdownMenuItem asChild>
           <NavLink to="/perfil">
             <User aria-hidden />
-            Meus dados
+            Perfil
+          </NavLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <NavLink to="/configuracoes">
+            <Settings aria-hidden />
+            Configurações
           </NavLink>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

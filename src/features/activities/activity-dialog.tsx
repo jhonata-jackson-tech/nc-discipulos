@@ -3,8 +3,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useDisciples } from '@/features/members/use-members'
-import { activityStatusLabel, activityTypeLabel } from '@/lib/labels'
-import type { ActivityStatus, ActivityType } from '@/types/database'
+import { activityTypeLabel } from '@/lib/labels'
+import type { ActivityType } from '@/types/database'
 import { useSaveActivity, type ActivityWithAssignees } from './use-activities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,17 +21,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const TYPES: ActivityType[] = ['talk', 'snack', 'dynamic', 'birthdays', 'other']
-const STATUSES: ActivityStatus[] = ['todo', 'in_progress', 'done', 'cancelled']
 
+/**
+ * Sem "situação".
+ *
+ * O campo sobrou de quando a atividade tinha estado próprio ("a fazer", "em
+ * andamento") e qualquer um marcava. O que a liderança precisa saber não é
+ * como a atividade está — é se quem foi indicado topou. Essa resposta vem do
+ * aceite, e pedir as duas coisas fazia a mesma pergunta duas vezes.
+ */
 const schema = z.object({
   type: z.enum(['talk', 'snack', 'dynamic', 'birthdays', 'other']),
   title: z.string().trim().min(2, 'Dê um título à atividade.'),
   description: z.string().optional(),
   dueAt: z.string().optional(),
-  status: z.enum(['todo', 'in_progress', 'done', 'cancelled']),
   notes: z.string().optional(),
   isRecurring: z.boolean(),
   assigneeIds: z.array(z.string()),
@@ -76,7 +88,6 @@ export function ActivityDialog({
       title: '',
       description: '',
       dueAt: '',
-      status: 'todo',
       notes: '',
       isRecurring: false,
       assigneeIds: [],
@@ -90,7 +101,6 @@ export function ActivityDialog({
       title: activity?.title ?? '',
       description: activity?.description ?? '',
       dueAt: activity?.due_at ? activity.due_at.slice(0, 16) : '',
-      status: activity?.status ?? 'todo',
       notes: activity?.notes ?? '',
       isRecurring: activity?.is_recurring ?? false,
       assigneeIds: activity?.assignees.map((entry) => entry.profile.id) ?? [],
@@ -106,7 +116,6 @@ export function ActivityDialog({
       title: values.title,
       description: values.description || null,
       dueAt: values.dueAt ? new Date(values.dueAt).toISOString() : null,
-      status: values.status,
       notes: values.notes || null,
       isRecurring: values.isRecurring,
       assigneeIds: values.assigneeIds,
@@ -120,7 +129,8 @@ export function ActivityDialog({
         <DialogHeader>
           <DialogTitle>{activity ? 'Editar atividade' : 'Nova atividade'}</DialogTitle>
           <DialogDescription>
-            O Talk e as demais atividades podem ter mais de um responsável.
+            O Talk e as demais atividades podem ter mais de um responsável. Quem você indicar
+            precisa aceitar — se você se indicar, já entra aceito.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,29 +157,17 @@ export function ActivityDialog({
               />
             </Field>
 
-            <Field label="Situação" required>
-              <Controller
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger aria-label="Situação da atividade">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {activityStatusLabel[status]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+            <Field label="Prazo" htmlFor="dueAt" hint="Opcional. Horário no fuso de São Paulo.">
+              <Input id="dueAt" type="datetime-local" {...form.register('dueAt')} />
             </Field>
           </div>
 
-          <Field label="Título" htmlFor="title" required error={form.formState.errors.title?.message}>
+          <Field
+            label="Título"
+            htmlFor="title"
+            required
+            error={form.formState.errors.title?.message}
+          >
             <Input id="title" placeholder="Ex.: Talk sobre gratidão" {...form.register('title')} />
           </Field>
 
@@ -177,11 +175,10 @@ export function ActivityDialog({
             <Textarea id="description" rows={3} {...form.register('description')} />
           </Field>
 
-          <Field label="Prazo" htmlFor="dueAt" hint="Opcional. Horário no fuso de São Paulo.">
-            <Input id="dueAt" type="datetime-local" {...form.register('dueAt')} />
-          </Field>
-
-          <Field label="Responsáveis" hint="Discípulos e liderança. Quem for indicado precisa aceitar.">
+          <Field
+            label="Responsáveis"
+            hint="Discípulos e liderança. Quem for indicado precisa aceitar."
+          >
             <Controller
               control={form.control}
               name="assigneeIds"

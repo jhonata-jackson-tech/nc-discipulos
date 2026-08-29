@@ -1,5 +1,14 @@
 import * as React from 'react'
-import { CalendarClock, Check, CopyPlus, ListChecks, Pencil, Plus, Repeat, Trash2 } from 'lucide-react'
+import {
+  CalendarClock,
+  Check,
+  CopyPlus,
+  ListChecks,
+  Pencil,
+  Plus,
+  Repeat,
+  Trash2,
+} from 'lucide-react'
 import { useSession } from '@/features/auth/session-context'
 import { useWeeks } from '@/features/care/use-care'
 import {
@@ -30,7 +39,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -133,7 +148,7 @@ export function ActivitiesPage() {
         >
           {/* `min-w-0` e o que permite a lista encolher dentro do flex e rolar
               sozinha em telas estreitas, em vez de esticar a pagina. */}
-          <TabsList className="scrollbar-thin w-full justify-start overflow-x-auto">
+          <TabsList className="w-full scrollbar-thin justify-start overflow-x-auto">
             {FILTROS.map((opcao) => (
               <TabsTrigger key={opcao} value={opcao}>
                 {opcao === 'all' ? 'Todas' : activityResponseLabel[opcao]}
@@ -229,7 +244,7 @@ export function ActivitiesPage() {
                         {activityResponseLabel[entry.response]}
                       </span>
                       {entry.justification && (
-                        <span className="text-muted-foreground w-full text-xs italic text-pretty">
+                        <span className="text-muted-foreground w-full text-xs text-pretty italic">
                           “{entry.justification}”
                         </span>
                       )}
@@ -325,7 +340,6 @@ export function ActivitiesPage() {
   )
 }
 
-
 /**
  * Recusa com motivo.
  *
@@ -359,8 +373,11 @@ function RecusaDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Field label="Motivo" required>
+        {/* Sem o par `htmlFor`/`id` o rótulo não pertence ao campo: quem usa
+            leitor de tela ouviria "caixa de texto" e mais nada. */}
+        <Field label="Motivo" htmlFor="motivo" required>
           <Textarea
+            id="motivo"
             rows={3}
             value={motivo}
             onChange={(evento) => setMotivo(evento.target.value)}

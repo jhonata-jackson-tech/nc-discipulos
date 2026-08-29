@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import { createDraftWeek, signIn, state } from './support'
+import { randomUUID } from 'node:crypto'
+import { createDraftWeek, nameOf, signIn, state } from './support'
 
 test.skip(!state.ready, 'Ambiente de teste não configurado.')
 
@@ -81,18 +82,45 @@ test.describe('supervisão reservada', () => {
 })
 
 test.describe('atividades: o combinado', () => {
-  test('o discípulo aceita, e recusar exige motivo', async ({ page, browser }) => {
-    const titulo = `Lanche do GC (${test.info().project.name})`
+  test('quem cria e se indica já entra aceito', async ({ page }, testInfo) => {
+    // Título único por execução: o banco de desenvolvimento guarda o que os
+    // testes anteriores criaram, e um aceite de ontem esconderia a regressão
+    // de hoje.
+    const titulo = `Dinâmica da liderança ${randomUUID().slice(0, 6)} (${testInfo.project.name})`
 
-    // A liderança indica o discípulo.
     await signIn(page, 'leader')
     await page.goto('/atividades')
     await page.getByRole('button', { name: 'Nova atividade' }).first().click()
-    await page.getByLabel('Título').fill(titulo)
-    const lista = page.getByRole('dialog').getByRole('checkbox')
-    await lista.first().click()
-    await page.getByRole('button', { name: 'Criar atividade' }).click()
+
+    const dialogo = page.getByRole('dialog')
+    await dialogo.getByLabel('Título').fill(titulo)
+    await dialogo.getByText(nameOf('leader')).click()
+    await dialogo.getByRole('button', { name: 'Criar atividade' }).click()
     await expect(page.getByText('Atividade criada.')).toBeVisible()
+
+    // Nem aceite pendente, nem botão para aceitar o que a pessoa mesma quis.
+    const cartao = page.locator('div').filter({ hasText: titulo }).last()
+    await expect(cartao.getByText('Aceitou')).toBeVisible()
+    await expect(cartao.getByRole('button', { name: 'Aceitar' })).toHaveCount(0)
+  })
+
+  test('o discípulo aceita, e recusar exige motivo', async ({ page, browser }, testInfo) => {
+    const aceita = `Lanche do GC ${randomUUID().slice(0, 6)} (${testInfo.project.name})`
+    const recusada = `Talk do GC ${randomUUID().slice(0, 6)} (${testInfo.project.name})`
+
+    // A liderança indica o discípulo em duas atividades: uma para aceitar,
+    // outra para recusar.
+    await signIn(page, 'leader')
+    await page.goto('/atividades')
+
+    for (const titulo of [aceita, recusada]) {
+      await page.getByRole('button', { name: 'Nova atividade' }).first().click()
+      const dialogo = page.getByRole('dialog')
+      await dialogo.getByLabel('Título').fill(titulo)
+      await dialogo.getByText(nameOf('disciple')).click()
+      await dialogo.getByRole('button', { name: 'Criar atividade' }).click()
+      await expect(page.getByText('Atividade criada.')).toBeVisible()
+    }
     await expect(page.getByText('Aguardando resposta').first()).toBeVisible()
 
     // Quem foi indicado responde.
@@ -101,16 +129,20 @@ test.describe('atividades: o combinado', () => {
     await signIn(outraPagina, 'disciple')
     await outraPagina.goto('/atividades')
 
-    const cartao = outraPagina.locator('div').filter({ hasText: titulo }).last()
-    if (await cartao.getByRole('button', { name: 'Não vou conseguir' }).count()) {
-      await cartao.getByRole('button', { name: 'Não vou conseguir' }).click()
-      const recusa = outraPagina.getByRole('dialog')
-      // Sem motivo, o botão nem libera.
-      await expect(recusa.getByRole('button', { name: 'Enviar recusa' })).toBeDisabled()
-      await recusa.getByLabel('Motivo').fill('Estarei viajando nesse dia.')
-      await recusa.getByRole('button', { name: 'Enviar recusa' }).click()
-      await expect(outraPagina.getByText('Resposta enviada à liderança.')).toBeVisible()
-    }
+    // Aceitar: o caminho que estava quebrado - o banco recusava a resposta.
+    const cartaoAceite = outraPagina.locator('div').filter({ hasText: aceita }).last()
+    await cartaoAceite.getByRole('button', { name: 'Aceitar' }).click()
+    await expect(outraPagina.getByText('Atividade aceita.')).toBeVisible()
+    await expect(cartaoAceite.getByText('Aceitou')).toBeVisible()
+
+    // Recusar sem motivo o banco não deixa passar - nem a tela.
+    const cartaoRecusa = outraPagina.locator('div').filter({ hasText: recusada }).last()
+    await cartaoRecusa.getByRole('button', { name: 'Não vou conseguir' }).click()
+    const recusa = outraPagina.getByRole('dialog')
+    await expect(recusa.getByRole('button', { name: 'Enviar recusa' })).toBeDisabled()
+    await recusa.getByLabel('Motivo').fill('Estarei viajando nesse dia.')
+    await recusa.getByRole('button', { name: 'Enviar recusa' }).click()
+    await expect(outraPagina.getByText('Resposta enviada à liderança.')).toBeVisible()
 
     await outro.close()
   })
@@ -121,8 +153,9 @@ test.describe('relatórios', () => {
     await signIn(page, 'leader')
     await page.goto('/relatorios')
     await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible()
-    await expect(page.getByText('Semana a semana')).toBeVisible()
-    await expect(page.getByText('Há mais tempo sem contato')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Semana a semana' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Constância de quem cuida' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Há mais tempo sem contato' })).toBeVisible()
   })
 
   test('o supervisor também vê', async ({ page }) => {

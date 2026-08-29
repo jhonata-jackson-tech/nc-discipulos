@@ -1,14 +1,14 @@
 import { AlertTriangle, CircleCheck, Clock, Eye, MessageCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
-  activityStatusLabel,
+  activityResponseLabel,
   assignmentStatusLabel,
   attentionLabel,
   roleLabelFor,
   weekStatusLabel,
 } from '@/lib/labels'
 import type {
-  ActivityStatus,
+  ActivityResponse,
   AppRole,
   AssignmentStatus,
   AttentionLevel,
@@ -69,12 +69,16 @@ export function WeekStatusBadge({ status }: { status: CareWeekStatus }) {
 }
 
 const ACTIVITY_VARIANT = {
-  todo: 'neutral',
-  in_progress: 'info',
-  done: 'success',
-  cancelled: 'outline',
+  pendente: 'outline',
+  aceita: 'success',
+  recusada: 'danger',
 } as const
 
-export function ActivityStatusBadge({ status }: { status: ActivityStatus }) {
-  return <Badge variant={ACTIVITY_VARIANT[status]}>{activityStatusLabel[status]}</Badge>
+/**
+ * O estado de uma atividade e a resposta de quem foi indicado - nao a antiga
+ * situacao ("a fazer", "em andamento"), que descrevia a atividade e nao o
+ * combinado.
+ */
+export function ActivityResponseBadge({ response }: { response: ActivityResponse }) {
+  return <Badge variant={ACTIVITY_VARIANT[response]}>{activityResponseLabel[response]}</Badge>
 }

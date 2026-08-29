@@ -14,7 +14,7 @@ const ROTAS = [
   { path: '/agenda', nome: 'Semanas' },
   { path: '/configuracoes', nome: 'Configurações' },
   { path: '/notificacoes', nome: 'Notificações' },
-  { path: '/perfil', nome: 'Meus dados' },
+  { path: '/perfil', nome: 'Perfil' },
 ]
 
 const LARGURAS = [360, 768, 1280, 1440]
@@ -83,8 +83,13 @@ test.describe('composição responsiva', () => {
         }
       })
 
-      expect(documento.rolaLado, `${rota.nome}: o documento rola na horizontal`).toBeLessThanOrEqual(1)
-      expect(documento.rolaBaixo, `${rota.nome}: o documento rola na vertical`).toBeLessThanOrEqual(1)
+      expect(
+        documento.rolaLado,
+        `${rota.nome}: o documento rola na horizontal`,
+      ).toBeLessThanOrEqual(1)
+      expect(documento.rolaBaixo, `${rota.nome}: o documento rola na vertical`).toBeLessThanOrEqual(
+        1,
+      )
       expect(
         documento.corpoRolaBaixo,
         `${rota.nome}: o corpo da página rola por fora do conteúdo`,
@@ -119,4 +124,34 @@ test.describe('composição responsiva', () => {
       expect(box!.height).toBeGreaterThanOrEqual(44)
     }
   })
+})
+
+/**
+ * Toda tela comeca do comeco.
+ *
+ * Quem rola e a area de conteudo, nao o documento - entao trocar de rota nao
+ * reposiciona nada por conta propria, e a tela seguinte nascia no meio,
+ * exatamente onde a anterior tinha parado.
+ */
+test('ao trocar de tela, o conteúdo volta ao início', async ({ page }) => {
+  await signIn(page, 'leader')
+  await page.goto('/relatorios')
+  await expect(page.getByRole('heading', { name: 'Relatórios' })).toBeVisible()
+
+  const rolagem = () => page.evaluate(() => document.querySelector('main')!.scrollTop)
+  const rolavel = await page.evaluate(() => {
+    const conteudo = document.querySelector('main')!
+    return conteudo.scrollHeight > conteudo.clientHeight + 200
+  })
+  test.skip(!rolavel, 'A tela não é longa o bastante neste tamanho.')
+
+  await page.evaluate(() => document.querySelector('main')!.scrollTo(0, 200))
+  expect(await rolagem()).toBeGreaterThan(0)
+
+  await page.getByRole('link', { name: 'Atividades' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Atividades' })).toBeVisible()
+
+  // A tela anterior continua à vista enquanto o pedaço da nova chega - o
+  // reposicionamento acontece na entrada dela, não no clique.
+  await expect.poll(rolagem).toBe(0)
 })

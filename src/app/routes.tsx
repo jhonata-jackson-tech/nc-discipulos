@@ -102,6 +102,10 @@ export const router = createBrowserRouter([
                   { path: '/minha-semana', element: <Navigate to="/" replace /> },
                   { path: '/notificacoes', element: <NotificationsPage /> },
                   { path: '/perfil', element: <ProfilePage /> },
+                  // Configurações deixou de ser só da liderança: os dados da
+                  // própria pessoa e os avisos dela moram aqui. O que é do GC
+                  // continua guardado, por aba, dentro da tela.
+                  { path: '/configuracoes', element: <SettingsPage /> },
                   { path: '/atividades', element: <ActivitiesPage /> },
                   {
                     element: <RequireRole roles={['leader', 'supervisor', 'disciple']} />,
@@ -120,10 +124,7 @@ export const router = createBrowserRouter([
                   },
                   {
                     element: <RequireRole roles={['leader']} />,
-                    children: [
-                      { path: '/distribuicao', element: <DistributionPage /> },
-                      { path: '/configuracoes', element: <SettingsPage /> },
-                    ],
+                    children: [{ path: '/distribuicao', element: <DistributionPage /> }],
                   },
                   { path: '*', element: <NotFoundPage /> },
                 ],

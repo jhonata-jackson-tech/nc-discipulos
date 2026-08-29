@@ -5,7 +5,6 @@ import {
   House,
   ListChecks,
   MessagesSquare,
-  Settings,
   Shuffle,
   Users,
 } from 'lucide-react'
@@ -24,6 +23,13 @@ export interface NavItem {
   description?: string
 }
 
+/**
+ * A navegacao lista o trabalho do GC.
+ *
+ * Configuracoes ficou de fora de proposito: ela e da pessoa, nao do grupo, e
+ * mora no menu da foto de perfil - junto de "Perfil" e "Sair", que sao os
+ * outros dois gestos da mesma natureza.
+ */
 export const NAV_ITEMS: NavItem[] = [
   {
     to: '/',
@@ -85,13 +91,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CalendarRange,
     roles: ['leader', 'supervisor'],
     description: 'Histórico das semanas de cuidado',
-  },
-  {
-    to: '/configuracoes',
-    label: 'Configurações',
-    icon: Settings,
-    roles: ['leader'],
-    description: 'Dados do GC e restrições de rodízio',
   },
 ]
 

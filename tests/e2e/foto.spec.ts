@@ -11,7 +11,8 @@ const PNG_MINIMO = Buffer.from(
 
 test('a pessoa coloca e remove a própria foto', async ({ page }) => {
   await signIn(page, 'disciple')
-  await page.goto('/perfil')
+  // A foto se troca em Configurações: o perfil só mostra.
+  await page.goto('/configuracoes?aba=dados')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
   await page.setInputFiles('#foto', {

@@ -30,7 +30,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { ActivityStatusBadge } from '@/components/common/badges'
+import { ActivityResponseBadge } from '@/components/common/badges'
 import { TransfersInbox } from './transfers-inbox'
 import { GroupProgressCard } from './group-progress-card'
 import { SupervisorOverview } from './supervisor-overview'
@@ -137,7 +137,11 @@ export function MyWeekPage() {
           <ArrowLeftRight aria-hidden />
           <div className="min-w-0 flex-1">
             <AlertTitle>
-              {pluralize(pendingTransfers.length, 'pedido de transferência', 'pedidos de transferência')}{' '}
+              {pluralize(
+                pendingTransfers.length,
+                'pedido de transferência',
+                'pedidos de transferência',
+              )}{' '}
               esperando você
             </AlertTitle>
             <AlertDescription>Veja logo abaixo e responda quando puder.</AlertDescription>
@@ -155,7 +159,9 @@ export function MyWeekPage() {
           <StatTile label="Contatos feitos" value={done} icon={CheckCircle2} tone="success" />
           <StatTile
             label="Minhas atividades"
-            value={myActivities.filter((a) => a.status !== 'done' && a.status !== 'cancelled').length}
+            value={
+              myActivities.filter((a) => a.status !== 'done' && a.status !== 'cancelled').length
+            }
             icon={ListChecks}
           />
           <StatTile
@@ -171,7 +177,9 @@ export function MyWeekPage() {
         <section className="grid grid-cols-2 gap-3">
           <StatTile
             label="Minhas atividades"
-            value={myActivities.filter((a) => a.status !== 'done' && a.status !== 'cancelled').length}
+            value={
+              myActivities.filter((a) => a.status !== 'done' && a.status !== 'cancelled').length
+            }
             icon={ListChecks}
           />
           <StatTile
@@ -292,7 +300,12 @@ export function MyWeekPage() {
                     </p>
                   )}
                 </div>
-                <ActivityStatusBadge status={activity.status} />
+                <ActivityResponseBadge
+                  response={
+                    activity.assignees.find((entry) => entry.profile.id === profile?.id)
+                      ?.response ?? 'pendente'
+                  }
+                />
               </div>
               {activity.assignees.length > 1 && (
                 <p className="text-muted-foreground mt-2 text-xs">

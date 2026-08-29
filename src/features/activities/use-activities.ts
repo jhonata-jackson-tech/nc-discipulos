@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { db } from '@/lib/db'
 import { friendlyError } from '@/lib/errors'
 import { useSession } from '@/features/auth/session-context'
-import type { Activity, ActivityResponse, ActivityStatus, ActivityType, Profile } from '@/types/database'
+import type { Activity, ActivityResponse, ActivityType, Profile } from '@/types/database'
 
 export interface ActivityWithAssignees extends Activity {
   assignees: {
@@ -42,7 +42,6 @@ export interface SaveActivityInput {
   title: string
   description?: string | null
   dueAt?: string | null
-  status?: ActivityStatus
   notes?: string | null
   isRecurring?: boolean
   assigneeIds: string[]
@@ -60,7 +59,10 @@ export function useSaveActivity() {
         p_title: input.title,
         p_description: input.description ?? null,
         p_due_at: input.dueAt ?? null,
-        p_status: input.status ?? 'todo',
+        // A situacao saiu da tela na 0013: o estado de uma atividade e a
+        // resposta de quem foi indicado. O parametro fica no RPC por
+        // compatibilidade e sempre chega no valor neutro.
+        p_status: 'todo',
         p_notes: input.notes ?? null,
         p_is_recurring: input.isRecurring ?? false,
         p_assignee_ids: input.assigneeIds,
@@ -99,19 +101,6 @@ export function useRespondActivity() {
       toast.success(variables.accept ? 'Atividade aceita.' : 'Resposta enviada à liderança.')
     },
     onError: (error) => toast.error(friendlyError(error)),
-  })
-}
-
-export function useSetActivityStatus() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: ActivityStatus }) => {
-      const { error } = await db.rpc('set_activity_status', { p_id: id, p_status: status })
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activities'] })
-    },
   })
 }
 

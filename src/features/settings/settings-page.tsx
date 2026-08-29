@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { Ban, History, Plus, Trash2 } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Ban, Bell, History, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSession } from '@/features/auth/session-context'
 import {
@@ -11,6 +12,8 @@ import {
 import { useAuditLogs } from '@/features/distribution/use-distribution'
 import { db } from '@/lib/db'
 import { formatDateTime } from '@/lib/date'
+import { PushCard } from '@/features/notifications/push-card'
+import { MeusDados } from './meus-dados'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,44 +30,121 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+/**
+ * Configurações: tudo o que se altera.
+ *
+ * A tela junta duas coisas que antes moravam longe uma da outra — os dados da
+ * própria pessoa (que ficavam num "Meus dados" solto) e os avisos (que só
+ * apareciam quem entrasse no sininho, junto com a lista de notificações, como
+ * se ligar o aviso fosse ler o aviso). O que é do GC continua aqui, e continua
+ * só para a liderança.
+ */
 export function SettingsPage() {
-  const { group, refresh } = useSession()
+  const { group, isLeader, refresh } = useSession()
+  const [params, setParams] = useSearchParams()
+
+  // A aba vive na URL: assim o "Editar meus dados" do perfil chega direto no
+  // lugar certo, e voltar pelo navegador não perde a aba aberta.
+  const aba = params.get('aba') ?? 'dados'
+  const trocarAba = (valor: string) => {
+    const proximo = new URLSearchParams(params)
+    proximo.set('aba', valor)
+    setParams(proximo, { replace: true })
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Configurações do GC"
-        description="Dados do grupo, restrições de rodízio e histórico de alterações."
+        title="Configurações"
+        description={
+          isLeader ? 'Seus dados, seus avisos e o que rege o GC.' : 'Seus dados e seus avisos.'
+        }
       />
 
-      <Tabs defaultValue="grupo">
-        <TabsList>
-          <TabsTrigger value="grupo">Grupo</TabsTrigger>
-          <TabsTrigger value="restricoes">Restrições</TabsTrigger>
-          <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
+      <Tabs value={aba} onValueChange={trocarAba}>
+        {/* `min-w-0` deixa a lista encolher e rolar sozinha no celular, em vez
+            de esticar a página inteira. */}
+        <TabsList className="w-full min-w-0 scrollbar-thin justify-start overflow-x-auto">
+          <TabsTrigger value="dados">Meus dados</TabsTrigger>
+          <TabsTrigger value="avisos">Avisos</TabsTrigger>
+          {isLeader && <TabsTrigger value="gc">O GC</TabsTrigger>}
+          {isLeader && <TabsTrigger value="rodizio">Rodízio</TabsTrigger>}
+          {isLeader && <TabsTrigger value="historico">Histórico</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="grupo">
-          {/* A chave garante que o formulario nasca ja com os dados do GC. */}
-          {group && (
-            <GroupForm
-              key={group.id}
-              groupId={group.id}
-              name={group.name}
-              description={group.description ?? ''}
-              onSaved={refresh}
-            />
-          )}
+        <TabsContent value="dados">
+          <MeusDados />
         </TabsContent>
 
-        <TabsContent value="restricoes">
-          <RestrictionsCard />
+        <TabsContent value="avisos">
+          <AvisosCard />
         </TabsContent>
 
-        <TabsContent value="auditoria">
-          <AuditCard />
-        </TabsContent>
+        {isLeader && (
+          <TabsContent value="gc">
+            {/* A chave garante que o formulario nasca ja com os dados do GC. */}
+            {group && (
+              <GroupForm
+                key={group.id}
+                groupId={group.id}
+                name={group.name}
+                description={group.description ?? ''}
+                onSaved={refresh}
+              />
+            )}
+          </TabsContent>
+        )}
+
+        {isLeader && (
+          <TabsContent value="rodizio">
+            <RestrictionsCard />
+          </TabsContent>
+        )}
+
+        {isLeader && (
+          <TabsContent value="historico">
+            <AuditCard />
+          </TabsContent>
+        )}
       </Tabs>
+    </div>
+  )
+}
+
+/**
+ * Avisos.
+ *
+ * O interruptor saiu do sininho. Lá ele dividia espaço com a lista de
+ * notificações, e "ligar o aviso" ficava parecendo mais um aviso — quem só
+ * queria ler o que chegou tropeçava numa configuração, e quem queria a
+ * configuração não pensava em procurá-la dentro da caixa de entrada.
+ */
+function AvisosCard() {
+  return (
+    <div className="max-w-xl space-y-4">
+      <PushCard />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>O que o app avisa</CardTitle>
+          <CardDescription>
+            Semana publicada, alguém indicado para uma atividade, transferência de cuidado e
+            resposta da supervisão.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-muted-foreground text-sm text-pretty">
+            O aviso fora do app nunca mostra nomes — o conteúdo fica dentro, atrás da sua senha.
+            Quem lê a tela de bloqueio de outra pessoa não descobre de quem o GC está cuidando.
+          </p>
+          <Button asChild variant="outline">
+            <Link to="/notificacoes">
+              <Bell aria-hidden />
+              Ver os avisos que chegaram
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

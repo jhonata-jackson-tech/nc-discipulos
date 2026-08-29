@@ -6,7 +6,6 @@
  */
 import type {
   ActivityResponse,
-  ActivityStatus,
   ActivityType,
   AppRole,
   AssignmentOrigin,
@@ -144,13 +143,6 @@ export const activityTypeLabel: Record<ActivityType, string> = {
   other: 'Outro',
 }
 
-export const activityStatusLabel: Record<ActivityStatus, string> = {
-  todo: 'A fazer',
-  in_progress: 'Em andamento',
-  done: 'Concluída',
-  cancelled: 'Cancelada',
-}
-
 export const supervisionStatusLabel: Record<SupervisionStatus, string> = {
   requested: 'Solicitado',
   seen: 'Visualizado',
@@ -169,7 +161,6 @@ export const urgencyLabel: Record<SupervisionUrgency, string> = {
 export const FEEDBACK_PRIVACY_HINT =
   'Escreva o suficiente para cuidar bem. Não registre confissões, diagnósticos, ' +
   'documentos ou detalhes íntimos.'
-
 
 /**
  * Como chamar alguém nas telas.

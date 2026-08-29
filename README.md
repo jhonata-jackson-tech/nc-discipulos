@@ -42,6 +42,8 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Transferência com aceite e reorganização auditada do líder | ✅ |
 | Atividades com múltiplos responsáveis e recorrência | ✅ |
 | Supervisão reservada e anotações privadas | ✅ |
+| Relatórios com séries semana a semana e mapa de constância | ✅ |
+| Perfil (só ver) separado de Configurações (alterar) | ✅ |
 | Notificações internas | ✅ |
 | PWA instalável com cache do shell | ✅ |
 | Notificações push (fora do app) | ✅ |
@@ -710,6 +712,7 @@ src/
   components/
     ui/           primitivos (botão, campo, diálogo, tabela…)
     common/       peças compartilhadas (estados, badges, pessoa, indicadores)
+    charts/       gráficos do relatório em SVG puro, sem biblioteca
     layout/       shell, guardas de rota e avisos globais
   lib/            datas, rótulos em pt-BR, erros, sessão e cliente de dados
   sw.ts           service worker: cache do esqueleto e notificações push
@@ -785,6 +788,40 @@ apenas quando a escolha é "seguir o sistema". Um script inline no `index.html`
 aplica a classe antes do primeiro paint, para não piscar branco em quem usa o
 tema escuro. Todas as cores são tokens em `src/index.css` — nenhuma cor
 literal nos componentes.
+
+**A atividade não tem situação — tem combinado.** O campo "a fazer / em
+andamento / concluída" descrevia a atividade, e não o acerto entre duas pessoas:
+a liderança indicava alguém para o lanche e continuava sem saber se a pessoa
+viu, se pode, se topou. O único estado que existe hoje é a resposta de quem foi
+indicado. E quem cria a atividade **se indicando** já entra aceito, sem aviso:
+já quis, já sabe — pedir confirmação seria perguntar duas vezes a mesma coisa.
+
+**Os gráficos não têm biblioteca.** São SVG e `div` em `src/components/charts/`.
+O app é instalado no celular de 33 pessoas; uma biblioteca de gráficos custaria
+mais bytes do que toda a tela de relatório junta. E, escrito à mão, o gráfico
+herda os tokens do tema em vez de trazer uma paleta que só combina no claro.
+
+**Duas escalas de cor, e só duas.** A **rampa** (`--chart-1..5`) mede
+quantidade: um tom só, do claro ao escuro, com a âncora invertida no tema
+escuro. A **divergente** (`--chart-neg-2 .. --chart-pos-2`) mede polaridade, com
+cinza no meio — é ela que desenha a escala do feedback, onde "precisa de ajuda"
+e "muito bem" são lados opostos de um mesmo eixo. Silêncio fica **fora** do
+eixo: não responder não é um nível de bem-estar. Os passos foram conferidos com
+um validador (rampa monótona, contraste mínimo nas marcas), e toda legenda traz
+o número ao lado do nome — os tons mais claros ficam abaixo de 3:1 por
+definição, e o número escrito é o que garante que a informação chegue a quem não
+distingue a cor.
+
+**Perfil mostra; Configurações altera.** Eram a mesma tela, chamada "Meus
+dados", e entrar para conferir o próprio telefone significava entrar num
+formulário. Hoje o menu da foto tem três gestos — Perfil, Configurações, Sair —
+e o interruptor dos avisos mora em Configurações, não dentro da caixa de entrada
+do sininho: ligar o aviso não é ler o aviso.
+
+**Toda tela começa do começo.** Como quem rola é a área de conteúdo e não o
+documento, trocar de rota não reposiciona nada sozinho — a tela seguinte nascia
+no meio, onde a anterior tinha parado. O shell zera a rolagem a cada mudança de
+caminho, e `tests/e2e/responsivo.spec.ts` falha se isso regredir.
 
 **O asterisco de campo obrigatório é só visual.** Ele vem de `content: '*' / ''`,
 cujo texto alternativo vazio o mantém fora do nome acessível — quem usa leitor

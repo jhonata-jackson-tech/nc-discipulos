@@ -1,13 +1,12 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, CheckCheck, Trash2, X } from 'lucide-react'
+import { Bell, BellRing, CheckCheck, Settings, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useDeleteNotifications,
   useMarkNotificationsRead,
   useNotifications,
 } from './use-notifications'
-import { PushCard } from './push-card'
 import { formatDateTime } from '@/lib/date'
 import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/common/page-header'
@@ -50,28 +49,37 @@ export function NotificationsPage() {
         title="Notificações"
         description="Avisos sobre a sua semana, atividades e transferências."
         actions={
-          todos.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {unread.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => markRead.mutate(unread.map((item) => item.id))}
-                  loading={markRead.isPending}
-                >
-                  <CheckCheck aria-hidden />
-                  Marcar todas como lidas
+          <div className="flex flex-wrap gap-2">
+            {todos.length > 0 && (
+              <>
+                {/* O interruptor dos avisos saiu daqui: esta tela é para ler o
+                    que chegou. Com a caixa vazia o atalho já aparece no meio
+                    dela - dois botões para a mesma coisa seriam ruído. */}
+                <Button asChild variant="outline">
+                  <Link to="/configuracoes?aba=avisos">
+                    <Settings aria-hidden />
+                    Avisos
+                  </Link>
                 </Button>
-              )}
-              <Button variant="outline" onClick={() => setConfirmarLimpeza(true)}>
-                <Trash2 aria-hidden />
-                Limpar tudo
-              </Button>
-            </div>
-          ) : undefined
+                {unread.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => markRead.mutate(unread.map((item) => item.id))}
+                    loading={markRead.isPending}
+                  >
+                    <CheckCheck aria-hidden />
+                    Marcar todas como lidas
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setConfirmarLimpeza(true)}>
+                  <Trash2 aria-hidden />
+                  Limpar tudo
+                </Button>
+              </>
+            )}
+          </div>
         }
       />
-
-      <PushCard />
 
       {notifications.isLoading && <CardListSkeleton rows={4} />}
       {notifications.isError && (
@@ -85,6 +93,14 @@ export function NotificationsPage() {
               icon={Bell}
               title="Nenhuma notificação por aqui"
               description="Você será avisado quando a semana for publicada ou alguém precisar de você."
+              action={
+                <Button asChild variant="outline">
+                  <Link to="/configuracoes?aba=avisos">
+                    <BellRing aria-hidden />
+                    Configurar avisos
+                  </Link>
+                </Button>
+              }
             />
           </CardContent>
         </Card>

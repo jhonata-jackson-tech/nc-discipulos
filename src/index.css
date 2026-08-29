@@ -40,6 +40,21 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Cores dos graficos. Cada uma tem um trabalho, e nenhuma serve para dois:
+     a rampa mede quantidade, a divergente mede polaridade. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-neg-2: var(--chart-neg-2);
+  --color-chart-neg-1: var(--chart-neg-1);
+  --color-chart-mid: var(--chart-mid);
+  --color-chart-pos-1: var(--chart-pos-1);
+  --color-chart-pos-2: var(--chart-pos-2);
+  --color-chart-ausente: var(--chart-ausente);
+  --color-chart-grid: var(--chart-grid);
+
   /* Painel de marca das telas de entrada. */
   --color-brand-panel: var(--brand-panel);
   --color-brand-panel-foreground: var(--brand-panel-foreground);
@@ -101,6 +116,36 @@
   --input: oklch(0.885 0 0);
   --ring: oklch(0.45 0 0);
 
+  /* ---------------------------------------------------------------- graficos
+     Duas escalas, e so duas.
+
+     A **rampa** (`chart-1..5`) mede quantidade: um unico tom, do claro ao
+     escuro. E o padrao seguro - dificil de ler errado, e nao gasta cor
+     dizendo o que o tamanho da barra ja diz.
+
+     A **divergente** (`neg-2 .. pos-2`) mede polaridade, com cinza no meio:
+     serve para a escala do feedback, onde "precisa de ajuda" e "muito bem"
+     sao lados opostos de um mesmo eixo, e "seguindo" e o centro. `ausente`
+     nao e um nivel: e a falta de registro, e por isso e o mais apagado de
+     todos - sempre acompanhado do rotulo, nunca so pela cor.
+
+     Os passos foram conferidos com o validador: rampa monotona, contraste
+     minimo de 2:1 na ponta clara, 3:1 nas marcas que carregam informacao. */
+  --chart-1: oklch(0.76 0.055 245);
+  --chart-2: oklch(0.67 0.085 245);
+  --chart-3: oklch(0.58 0.11 245);
+  --chart-4: oklch(0.48 0.13 245);
+  --chart-5: oklch(0.39 0.135 245);
+
+  --chart-neg-2: oklch(0.5 0.15 25);
+  --chart-neg-1: oklch(0.66 0.11 32);
+  --chart-mid: oklch(0.68 0.02 250);
+  --chart-pos-1: oklch(0.65 0.105 160);
+  --chart-pos-2: oklch(0.5 0.11 158);
+  --chart-ausente: oklch(0.84 0.008 250);
+
+  --chart-grid: oklch(0.93 0 0);
+
   /* Painel da tela de entrada: o preto suave onde a marca branca aparece. */
   --brand-panel: oklch(0.22 0 0);
   --brand-panel-foreground: oklch(0.97 0 0);
@@ -151,6 +196,23 @@
   --border: oklch(0.3 0 0);
   --input: oklch(0.35 0 0);
   --ring: oklch(0.75 0 0);
+
+  /* No escuro a rampa inverte a ancora: mais quantidade fica mais **claro**,
+     porque sobre carvao um tom escuro desaparece em vez de pesar. */
+  --chart-1: oklch(0.42 0.06 245);
+  --chart-2: oklch(0.52 0.09 245);
+  --chart-3: oklch(0.62 0.11 245);
+  --chart-4: oklch(0.72 0.12 245);
+  --chart-5: oklch(0.82 0.1 245);
+
+  --chart-neg-2: oklch(0.72 0.15 25);
+  --chart-neg-1: oklch(0.58 0.11 32);
+  --chart-mid: oklch(0.52 0.02 250);
+  --chart-pos-1: oklch(0.6 0.1 160);
+  --chart-pos-2: oklch(0.78 0.1 158);
+  --chart-ausente: oklch(0.4 0.008 250);
+
+  --chart-grid: oklch(0.28 0 0);
 
   --brand-panel: oklch(0.2 0 0);
   --brand-panel-foreground: oklch(0.94 0 0);

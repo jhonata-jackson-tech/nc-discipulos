@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
@@ -7,7 +8,8 @@ interface StatTileProps {
   value: number | string
   icon?: LucideIcon
   tone?: 'default' | 'warning' | 'danger' | 'success'
-  hint?: string
+  /** Aceita marcacao: a variacao do periodo vem com seta e cor. */
+  hint?: React.ReactNode
 }
 
 const TONE = {
@@ -24,10 +26,15 @@ export function StatTile({ label, value, icon: Icon, tone = 'default', hint }: S
         <div className="min-w-0 space-y-1">
           <p className="text-muted-foreground text-xs font-medium">{label}</p>
           <p className="tabular font-display text-2xl leading-none font-bold">{value}</p>
-          {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
+          {hint && <p className="text-muted-foreground text-xs text-pretty">{hint}</p>}
         </div>
         {Icon && (
-          <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', TONE[tone])}>
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-lg',
+              TONE[tone],
+            )}
+          >
             <Icon className="size-[18px]" aria-hidden />
           </span>
         )}

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { BellRing, Share } from 'lucide-react'
+import { BellRing, Loader2, Share } from 'lucide-react'
 import { toast } from 'sonner'
 import { desligarPush, estadoPush, ligarPush, type EstadoPush } from './push'
 import { friendlyError } from '@/lib/errors'
@@ -69,11 +69,21 @@ export function PushCard() {
             <label htmlFor="push" className="font-medium">
               Avisar neste aparelho
             </label>
-            <p className="text-muted-foreground mt-0.5 text-sm text-pretty">
-              {estado === 'bloqueado'
-                ? 'As notificações estão bloqueadas nas configurações do navegador para este site. Libere por lá para voltar a receber.'
-                : 'Você recebe um aviso quando a semana é publicada ou alguém precisa de você. Por segurança, o aviso não mostra nomes — o conteúdo fica dentro do app.'}
-            </p>
+            {/* Ligar leva alguns segundos de verdade: o navegador precisa
+                registrar o aparelho no serviço de push do fabricante. Sem
+                dizer isso, o interruptor parado parece travado. */}
+            {ocupado ? (
+              <p className="text-muted-foreground mt-0.5 flex items-center gap-2 text-sm">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                Ligando neste aparelho… pode levar alguns segundos.
+              </p>
+            ) : (
+              <p className="text-muted-foreground mt-0.5 text-sm text-pretty">
+                {estado === 'bloqueado'
+                  ? 'As notificações estão bloqueadas nas configurações do navegador para este site. Libere por lá para voltar a receber.'
+                  : 'Você recebe um aviso quando a semana é publicada ou alguém precisa de você. Por segurança, o aviso não mostra nomes — o conteúdo fica dentro do app.'}
+              </p>
+            )}
           </div>
 
           <Switch

@@ -254,6 +254,7 @@ export function MembersPage() {
             <div className="flex items-start gap-3">
               <Person
                 name={member.full_name}
+                photo={member.photo_url}
                 detail={member.email ?? 'Sem e-mail cadastrado'}
                 className="min-w-0 flex-1"
               />
@@ -308,7 +309,12 @@ export function MembersPage() {
               {filtered.map((member) => (
                 <TableRow key={member.id} className={member.status === 'inactive' ? 'opacity-60' : ''}>
                   <TableCell>
-                    <Person name={member.full_name} size="sm" detail={member.email ?? undefined} />
+                    <Person
+                      name={member.full_name}
+                      photo={member.photo_url}
+                      size="sm"
+                      detail={member.email ?? undefined}
+                    />
                   </TableCell>
                   <TableCell>
                     <RoleBadge role={member.role} gender={member.care_gender} />

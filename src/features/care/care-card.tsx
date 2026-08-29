@@ -35,6 +35,7 @@ export function CareCard({
       <div className="flex items-start gap-3">
         <Person
           name={person.full_name}
+          photo={person.photo_url}
           detail={
             showCaregiver
               ? `Com ${assignment.caregiver.full_name}`

@@ -258,6 +258,7 @@ export function CarePage() {
                   <TableCell>
                     <Person
                       name={assignment.cared_for.full_name}
+                      photo={assignment.cared_for.photo_url}
                       size="sm"
                       detail={
                         assignment.cared_for.care_gender

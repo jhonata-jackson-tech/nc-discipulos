@@ -9,7 +9,7 @@ import { Marca } from '@/components/common/marca'
 import { DemoRoleSwitcher } from '@/components/layout/demo-role-switcher'
 import { cn, initials } from '@/lib/utils'
 import { roleLabelFor } from '@/lib/labels'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -71,6 +71,7 @@ export function AppShell() {
             className="hover:bg-secondary mt-1 flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors"
           >
             <Avatar className="size-9">
+              {profile?.photo_url && <AvatarImage src={profile.photo_url} alt="" />}
               <AvatarFallback>{initials(profile?.full_name ?? '?')}</AvatarFallback>
             </Avatar>
             <span className="min-w-0 flex-1 leading-tight">
@@ -104,6 +105,7 @@ export function AppShell() {
                   className="touch-target flex items-center justify-center"
                 >
                   <Avatar className="size-8">
+                    {profile?.photo_url && <AvatarImage src={profile.photo_url} alt="" />}
                     <AvatarFallback>{initials(profile?.full_name ?? '?')}</AvatarFallback>
                   </Avatar>
                 </button>

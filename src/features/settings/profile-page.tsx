@@ -13,6 +13,7 @@ import { useUpdateMember } from '@/features/members/use-members'
 import { careGenderLabel, roleLabelFor } from '@/lib/labels'
 import { PageHeader } from '@/components/common/page-header'
 import { MeusNumeros } from './meus-numeros'
+import { FotoPerfil } from './foto-perfil'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -87,6 +88,8 @@ export function ProfilePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4" noValidate>
+            {profile && <FotoPerfil profile={profile} />}
+
             <Field
               label="Nome completo"
               htmlFor="full_name"

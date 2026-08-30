@@ -14,6 +14,7 @@ import { Field } from '@/components/ui/field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -162,11 +163,13 @@ function ForgotPasswordDialog({
           <DialogDescription>A redefinição é feita pela liderança do GC.</DialogDescription>
         </DialogHeader>
 
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          Fale com o administrador do sistema. Ele cadastra uma senha nova para você e a entrega
-          pessoalmente; depois de entrar, você mesmo troca em{' '}
-          <strong>Configurações → Meus dados</strong>.
-        </p>
+        <DialogBody>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Fale com o administrador do sistema. Ele cadastra uma senha nova para você e a entrega
+            pessoalmente; depois de entrar, você mesmo troca em{' '}
+            <strong>Configurações → Meus dados</strong>.
+          </p>
+        </DialogBody>
 
         <DialogFooter>
           <Button onClick={() => onOpenChange(false)} className="w-full sm:w-auto">

@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -73,13 +74,14 @@ function InviteBody({ member, onClose }: { member: Profile; onClose: () => void 
 
   return (
     <>
-        <DialogHeader>
-          <DialogTitle>Convidar {member.full_name}</DialogTitle>
-          <DialogDescription>
-            Envie o link por WhatsApp ou e-mail. Só quem tem o link consegue criar acesso.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogHeader>
+        <DialogTitle>Convidar {member.full_name}</DialogTitle>
+        <DialogDescription>
+          Envie o link por WhatsApp ou e-mail. Só quem tem o link consegue criar acesso.
+        </DialogDescription>
+      </DialogHeader>
 
+      <DialogBody>
         {error && (
           <Alert variant="danger">
             <AlertDescription>{error}</AlertDescription>
@@ -132,6 +134,7 @@ function InviteBody({ member, onClose }: { member: Profile; onClose: () => void 
             </DialogFooter>
           </div>
         )}
+      </DialogBody>
     </>
   )
 }

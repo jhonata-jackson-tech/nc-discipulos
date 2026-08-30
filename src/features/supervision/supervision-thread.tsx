@@ -19,12 +19,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const STATUSES: SupervisionStatus[] = ['requested', 'seen', 'scheduled', 'done', 'cancelled']
 
@@ -61,14 +68,15 @@ function ThreadBody({ request }: { request: SupervisionRequestWithPeople }) {
   const isRequester = request.requester_id === profile?.id
 
   return (
-      <>
-        <DialogHeader>
-          <DialogTitle>{request.subject}</DialogTitle>
-          <DialogDescription>
-            {request.requester.full_name} · {formatDate(request.created_at)}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>{request.subject}</DialogTitle>
+        <DialogDescription>
+          {request.requester.full_name} · {formatDate(request.created_at)}
+        </DialogDescription>
+      </DialogHeader>
 
+      <DialogBody>
         <div className="flex flex-wrap gap-2">
           <Badge variant="neutral">{supervisionStatusLabel[request.status]}</Badge>
           <Badge variant={request.urgency === 'high' ? 'danger' : 'outline'}>
@@ -91,7 +99,9 @@ function ThreadBody({ request }: { request: SupervisionRequestWithPeople }) {
         )}
 
         {request.scheduled_for && (
-          <p className="text-sm font-medium">Agendada para {formatDateTime(request.scheduled_for)}</p>
+          <p className="text-sm font-medium">
+            Agendada para {formatDateTime(request.scheduled_for)}
+          </p>
         )}
 
         {isSupervisor && (
@@ -191,6 +201,7 @@ function ThreadBody({ request }: { request: SupervisionRequestWithPeople }) {
             </Button>
           </>
         )}
-      </>
+      </DialogBody>
+    </>
   )
 }

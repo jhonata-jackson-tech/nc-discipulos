@@ -33,6 +33,7 @@ import { Field } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -43,7 +44,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,7 +97,8 @@ export function DistributionPage() {
   }
 
   const pendingGender = (members.data ?? []).filter(
-    (member) => member.care_gender === null && ['leader', 'disciple', 'member'].includes(member.role),
+    (member) =>
+      member.care_gender === null && ['leader', 'disciple', 'member'].includes(member.role),
   )
 
   return (
@@ -190,7 +198,11 @@ export function DistributionPage() {
               )}
 
               {week?.status === 'published' && (
-                <Button variant="outline" onClick={() => close.mutate(week.id)} loading={close.isPending}>
+                <Button
+                  variant="outline"
+                  onClick={() => close.mutate(week.id)}
+                  loading={close.isPending}
+                >
                   Encerrar semana
                 </Button>
               )}
@@ -230,7 +242,8 @@ export function DistributionPage() {
         <Alert variant="success">
           <CheckCircle2 aria-hidden />
           <AlertDescription>
-            Carga equilibrada nos dois grupos e nenhuma dupla repetida. Pode publicar com tranquilidade.
+            Carga equilibrada nos dois grupos e nenhuma dupla repetida. Pode publicar com
+            tranquilidade.
           </AlertDescription>
         </Alert>
       )}
@@ -244,9 +257,7 @@ export function DistributionPage() {
           onMove={(caredForId, caregiverId) =>
             setDraftAssignment.mutate({ weekId: week.id, caredForId, caregiverId })
           }
-          onReassign={(assignment, caregiverId) =>
-            setRemanejando({ assignment, caregiverId })
-          }
+          onReassign={(assignment, caregiverId) => setRemanejando({ assignment, caregiverId })}
         />
       )}
 
@@ -297,9 +308,7 @@ function PoolCard({ pool }: { pool: PoolReportRow }) {
           {pool.loads.map((load) => (
             <li key={load.caregiverId} className="flex items-center gap-3 py-2 text-sm">
               <span className="min-w-0 flex-1 truncate">{load.fullName}</span>
-              {load.fixed > 0 && (
-                <Badge variant="outline">{load.fixed} do discipulado</Badge>
-              )}
+              {load.fixed > 0 && <Badge variant="outline">{load.fixed} do discipulado</Badge>}
               <span className="tabular font-medium">{load.total}</span>
             </li>
           ))}
@@ -322,7 +331,6 @@ function PoolCard({ pool }: { pool: PoolReportRow }) {
     </Card>
   )
 }
-
 
 /**
  * Remanejar um cuidado de semana já publicada.
@@ -356,14 +364,16 @@ function RemanejarDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Field label="Motivo" required>
-          <Textarea
-            rows={3}
-            value={motivo}
-            onChange={(evento) => setMotivo(evento.target.value)}
-            placeholder="Ex.: o responsável está viajando esta semana."
-          />
-        </Field>
+        <DialogBody>
+          <Field label="Motivo" required>
+            <Textarea
+              rows={3}
+              value={motivo}
+              onChange={(evento) => setMotivo(evento.target.value)}
+              placeholder="Ex.: o responsável está viajando esta semana."
+            />
+          </Field>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

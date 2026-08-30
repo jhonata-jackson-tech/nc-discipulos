@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -178,7 +179,7 @@ export function AppShell() {
               <DialogHeader>
                 <DialogTitle>Mais opções</DialogTitle>
               </DialogHeader>
-              <div className="flex flex-col gap-1 pb-2">
+              <DialogBody className="gap-1 pb-2">
                 {secondary.map((item) => (
                   <NavLink
                     key={item.to}
@@ -197,7 +198,7 @@ export function AppShell() {
                     </span>
                   </NavLink>
                 ))}
-              </div>
+              </DialogBody>
             </DialogContent>
           </Dialog>
         </div>

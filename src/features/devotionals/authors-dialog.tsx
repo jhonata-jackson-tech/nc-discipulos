@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -52,43 +53,45 @@ export function AuthorsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {editando ? (
-          <AuthorForm
-            autor={editando === 'novo' ? null : editando}
-            onPronto={() => setEditando(null)}
-          />
-        ) : (
-          <div className="space-y-2">
-            <ul className="divide-border divide-y">
-              {(autores.data ?? []).map((autor) => (
-                <li key={autor.id} className="flex items-center gap-3 py-2.5">
-                  <Avatar className="size-10">
-                    {autor.photo_url && <AvatarImage src={autor.photo_url} alt="" />}
-                    <AvatarFallback>{initials(autor.name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block truncate text-sm font-medium">
-                      {[autor.title, autor.name].filter(Boolean).join(' ')}
-                    </span>
-                    {!autor.active && (
-                      <span className="text-muted-foreground block text-xs">
-                        não aparece mais na lista
+        <DialogBody>
+          {editando ? (
+            <AuthorForm
+              autor={editando === 'novo' ? null : editando}
+              onPronto={() => setEditando(null)}
+            />
+          ) : (
+            <div className="space-y-2">
+              <ul className="divide-border divide-y">
+                {(autores.data ?? []).map((autor) => (
+                  <li key={autor.id} className="flex items-center gap-3 py-2.5">
+                    <Avatar className="size-10">
+                      {autor.photo_url && <AvatarImage src={autor.photo_url} alt="" />}
+                      <AvatarFallback>{initials(autor.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block truncate text-sm font-medium">
+                        {[autor.title, autor.name].filter(Boolean).join(' ')}
                       </span>
-                    )}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => setEditando(autor)}>
-                    Editar
-                  </Button>
-                </li>
-              ))}
-            </ul>
+                      {!autor.active && (
+                        <span className="text-muted-foreground block text-xs">
+                          não aparece mais na lista
+                        </span>
+                      )}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={() => setEditando(autor)}>
+                      Editar
+                    </Button>
+                  </li>
+                ))}
+              </ul>
 
-            <Button variant="outline" onClick={() => setEditando('novo')}>
-              <Plus aria-hidden />
-              Novo autor
-            </Button>
-          </div>
-        )}
+              <Button variant="outline" onClick={() => setEditando('novo')}>
+                <Plus aria-hidden />
+                Novo autor
+              </Button>
+            </div>
+          )}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

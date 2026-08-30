@@ -33,6 +33,7 @@ import { Field } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -373,17 +374,19 @@ function RecusaDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Sem o par `htmlFor`/`id` o rótulo não pertence ao campo: quem usa
+        <DialogBody>
+          {/* Sem o par `htmlFor`/`id` o rótulo não pertence ao campo: quem usa
             leitor de tela ouviria "caixa de texto" e mais nada. */}
-        <Field label="Motivo" htmlFor="motivo" required>
-          <Textarea
-            id="motivo"
-            rows={3}
-            value={motivo}
-            onChange={(evento) => setMotivo(evento.target.value)}
-            placeholder="Ex.: estarei viajando nesse dia."
-          />
-        </Field>
+          <Field label="Motivo" htmlFor="motivo" required>
+            <Textarea
+              id="motivo"
+              rows={3}
+              value={motivo}
+              onChange={(evento) => setMotivo(evento.target.value)}
+              placeholder="Ex.: estarei viajando nesse dia."
+            />
+          </Field>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

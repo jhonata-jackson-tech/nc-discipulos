@@ -36,3 +36,32 @@ test('no diálogo, só os campos rolam: título e botão ficam', async ({ page }
   )
   expect(rolouAtras, 'a página atrás do diálogo rolou').toBeLessThanOrEqual(1)
 })
+
+/**
+ * O mesmo contrato vale para os diálogos que não são um formulário: histórico,
+ * lista, texto longo. Sem um corpo que role, o conteúdo fica solto - a caixa
+ * estica os filhos e o diálogo vira página.
+ */
+test('no diálogo sem formulário, só o corpo rola', async ({ page }) => {
+  // Visor curto de propósito: qualquer conteúdo já passa da altura da caixa.
+  await page.setViewportSize({ width: 360, height: 420 })
+  await signIn(page, 'leader')
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Mais' }).click()
+
+  const dialogo = page.getByRole('dialog')
+  const titulo = dialogo.getByRole('heading', { name: 'Mais opções' })
+  await expect(titulo).toBeInViewport()
+
+  const corpo = dialogo.locator('[data-slot="dialog-body"]')
+  await expect(corpo).toBeVisible()
+
+  const rolou = await corpo.evaluate((elemento) => {
+    elemento.scrollTo(0, elemento.scrollHeight)
+    return elemento.scrollTop
+  })
+  expect(rolou, 'o corpo do diálogo não rolou').toBeGreaterThan(0)
+
+  await expect(titulo, 'o título sumiu ao rolar o corpo').toBeInViewport()
+})

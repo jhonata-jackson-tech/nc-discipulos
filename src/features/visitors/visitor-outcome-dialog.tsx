@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -94,64 +95,71 @@ function Corpo({
         </DialogDescription>
       </DialogHeader>
 
-      {desfecho === 'promover' ? (
-        <div className="space-y-4">
-          <Field label="Entra como" required>
-            <RadioGroup
-              value={papel}
-              onValueChange={(valor) => setPapel(valor as 'member' | 'disciple')}
-              className="grid gap-2"
-            >
-              <label className="border-input hover:bg-secondary flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-                <RadioGroupItem value="member" id="papel-member" className="mt-0.5" />
-                <span>
-                  <Label htmlFor="papel-member" className="cursor-pointer">
-                    Irmão/Irmã
-                  </Label>
-                  <span className="text-muted-foreground block text-xs text-pretty">
-                    Passa a ser cuidado no rodízio da semana, como o restante do GC.
+      <DialogBody>
+        {desfecho === 'promover' ? (
+          <div className="space-y-4">
+            <Field label="Entra como" required>
+              <RadioGroup
+                value={papel}
+                onValueChange={(valor) => setPapel(valor as 'member' | 'disciple')}
+                className="grid gap-2"
+              >
+                <label className="border-input hover:bg-secondary flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+                  <RadioGroupItem value="member" id="papel-member" className="mt-0.5" />
+                  <span>
+                    <Label htmlFor="papel-member" className="cursor-pointer">
+                      Irmão/Irmã
+                    </Label>
+                    <span className="text-muted-foreground block text-xs text-pretty">
+                      Passa a ser cuidado no rodízio da semana, como o restante do GC.
+                    </span>
                   </span>
-                </span>
-              </label>
-              <label className="border-input hover:bg-secondary flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-                <RadioGroupItem value="disciple" id="papel-disciple" className="mt-0.5" />
-                <span>
-                  <Label htmlFor="papel-disciple" className="cursor-pointer">
-                    Discípulo
-                  </Label>
-                  <span className="text-muted-foreground block text-xs text-pretty">
-                    Além de ser cuidado, também cuida. Vincule a um líder em Integrantes.
+                </label>
+                <label className="border-input hover:bg-secondary flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+                  <RadioGroupItem value="disciple" id="papel-disciple" className="mt-0.5" />
+                  <span>
+                    <Label htmlFor="papel-disciple" className="cursor-pointer">
+                      Discípulo
+                    </Label>
+                    <span className="text-muted-foreground block text-xs text-pretty">
+                      Além de ser cuidado, também cuida. Vincule a um líder em Integrantes.
+                    </span>
                   </span>
-                </span>
-              </label>
-            </RadioGroup>
-          </Field>
+                </label>
+              </RadioGroup>
+            </Field>
 
-          {!visitante.generoDeCuidado && (
-            <Alert variant="warning">
-              <UserPlus aria-hidden />
-              <AlertDescription>
-                O gênero de cuidado dele ainda não foi confirmado. Sem isso a distribuição da semana
-                fica bloqueada — confirme em Integrantes logo depois.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      ) : (
-        <Field label="Por quê?" htmlFor="motivo-do-encerramento" required error={erro ?? undefined}>
-          <Textarea
-            id="motivo-do-encerramento"
-            rows={3}
-            autoFocus
-            value={motivo}
-            onChange={(evento) => {
-              setMotivo(evento.target.value)
-              setErro(null)
-            }}
-            placeholder="Encaminhamos para o GC do bairro dele. / Pediu para não ser mais procurado."
-          />
-        </Field>
-      )}
+            {!visitante.generoDeCuidado && (
+              <Alert variant="warning">
+                <UserPlus aria-hidden />
+                <AlertDescription>
+                  O gênero de cuidado dele ainda não foi confirmado. Sem isso a distribuição da
+                  semana fica bloqueada — confirme em Integrantes logo depois.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        ) : (
+          <Field
+            label="Por quê?"
+            htmlFor="motivo-do-encerramento"
+            required
+            error={erro ?? undefined}
+          >
+            <Textarea
+              id="motivo-do-encerramento"
+              rows={3}
+              autoFocus
+              value={motivo}
+              onChange={(evento) => {
+                setMotivo(evento.target.value)
+                setErro(null)
+              }}
+              placeholder="Encaminhamos para o GC do bairro dele. / Pediu para não ser mais procurado."
+            />
+          </Field>
+        )}
+      </DialogBody>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>

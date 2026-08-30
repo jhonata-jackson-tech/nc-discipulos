@@ -60,13 +60,16 @@ export const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         'bg-card shadow-overlay fixed z-50 flex flex-col gap-4',
-        // Só os campos rolam. O formulário vira a área de rolagem e o
-        // cabeçalho fica de fora dela: no celular, ver o título sumir e ter
-        // que rolar de volta para achar o botão é o que faz parecer página em
-        // vez de aplicativo.
+        // Só o miolo rola. O cabeçalho e o rodapé ficam fora da rolagem: no
+        // celular, ver o título sumir e ter que rolar de volta para achar o
+        // botão é o que faz parecer página em vez de aplicativo.
+        //
+        // Quem rola é o `<form>`, quando ele é o corpo inteiro, ou o
+        // `DialogBody`. Sem um dos dois, o conteúdo fica solto: a caixa não
+        // sabe onde cortar e estica os filhos até o diálogo virar página.
         '[&>form]:flex [&>form]:min-h-0 [&>form]:flex-1 [&>form]:flex-col [&>form]:overflow-y-auto [&>form]:overscroll-contain',
         // Celular: folha que sobe. Desktop: caixa centralizada.
-        'inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]',
+        'inset-x-0 bottom-0 max-h-[92dvh] overflow-hidden rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]',
         'sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-h-[85vh] sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6',
         'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
@@ -85,6 +88,27 @@ export const DialogContent = React.forwardRef<
   </DialogPrimitive.Portal>
 ))
 DialogContent.displayName = 'DialogContent'
+
+/**
+ * O miolo do diálogo: a parte que rola.
+ *
+ * Todo diálogo que não seja um formulário inteiro precisa dele em volta do
+ * conteúdo. É o que mantém título e rodapé parados enquanto a lista, o
+ * histórico ou o texto longo rolam por baixo — e o que impede que um diálogo
+ * mais alto que a tela empurre o botão de confirmar para fora do alcance.
+ */
+export function DialogBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
 
 export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn('flex shrink-0 flex-col gap-1.5 pr-10', className)} {...props} />

@@ -207,7 +207,9 @@ describe('regra de genero', () => {
 
     const fixed = result.assignments.filter((a) => a.origin === 'fixed_disciple')
     expect(fixed).toHaveLength(0)
-    expect(result.assignments.find((a) => a.caredForId === 'discipula')?.caregiverId).toBe('lider-f')
+    expect(result.assignments.find((a) => a.caredForId === 'discipula')?.caregiverId).toBe(
+      'lider-f',
+    )
   })
 
   it('nao permite pool masculino sem pessoas cuidadas quebrar o feminino', () => {
@@ -226,7 +228,9 @@ describe('regra de genero', () => {
 // ============================================================================
 describe('discipulos fixos', () => {
   it('mantem o discipulo com o lider primario e conta na carga dele', () => {
-    const result = generateDistribution(baseInput({ participants: currentGroup(), fixedLinks: CURRENT_FIXED }))
+    const result = generateDistribution(
+      baseInput({ participants: currentGroup(), fixedLinks: CURRENT_FIXED }),
+    )
 
     for (const link of CURRENT_FIXED) {
       const found = result.assignments.find((a) => a.caredForId === link.discipleId)
@@ -481,10 +485,7 @@ describe('restricoes de pareamento', () => {
   })
 
   it('relata quem ficou sem cuidador quando as restricoes esgotam as opcoes', () => {
-    const participants = [
-      person('c1', 'leader', 'male'),
-      person('m1', 'member', 'male'),
-    ]
+    const participants = [person('c1', 'leader', 'male'), person('m1', 'member', 'male')]
     const result = generateDistribution(
       baseInput({ participants, restrictions: [{ a: 'c1', b: 'm1' }] }),
     )
@@ -545,7 +546,105 @@ describe('mudancas no elenco', () => {
     const pool = result.pools.find((p) => p.gender === 'male')!
 
     expect(result.assignments).toHaveLength(65)
-    expect(Math.max(...pool.loads.map((l) => l.total)) - Math.min(...pool.loads.map((l) => l.total)))
-      .toBeLessThanOrEqual(1)
+    expect(
+      Math.max(...pool.loads.map((l) => l.total)) - Math.min(...pool.loads.map((l) => l.total)),
+    ).toBeLessThanOrEqual(1)
+  })
+})
+
+// ============================================================================
+describe('o lider nao passa a semana so com os proprios discipulos', () => {
+  // O caso real que originou a regra: 12 mulheres para 4 cuidadoras, e a lider
+  // com 3 discipulas fixas - exatamente a carga base. A semana fechava com ela
+  // dentro do proprio discipulado, sem nenhum contato com o GC.
+  const poolFeminino = () => [
+    person('jenifer', 'leader', 'female'),
+    person('leticia', 'disciple', 'female'),
+    person('lethicia', 'disciple', 'female'),
+    person('paty', 'disciple', 'female'),
+    ...Array.from({ length: 9 }, (_, i) => person(`irma-${i}`, 'member', 'female' as const)),
+  ]
+  const fixas = [
+    { discipleId: 'leticia', leaderId: 'jenifer' },
+    { discipleId: 'lethicia', leaderId: 'jenifer' },
+    { discipleId: 'paty', leaderId: 'jenifer' },
+  ]
+  const semanaReal = () =>
+    generateDistribution(baseInput({ participants: poolFeminino(), fixedLinks: fixas }))
+
+  it('da ao lider alguem do GC mesmo quando isso passa do piso', () => {
+    const result = semanaReal()
+    const pool = result.pools.find((p) => p.gender === 'female')!
+    expect(pool.baseLoad).toBe(3)
+
+    const daLider = result.assignments.filter((a) => a.caregiverId === 'jenifer')
+    expect(daLider).toHaveLength(4)
+    expect(daLider.filter((a) => a.origin === 'fixed_disciple')).toHaveLength(3)
+
+    const doGc = daLider.filter((a) => a.origin === 'rotation')
+    expect(doGc).toHaveLength(1)
+    expect(doGc[0].caredForId).toMatch(/^irma-/)
+  })
+
+  it('nao chama de desigual a pessoa que a propria regra mandou dar', () => {
+    const pool = semanaReal().pools.find((p) => p.gender === 'female')!
+    expect(pool.warnings.some((w) => w.includes('desigual'))).toBe(false)
+  })
+
+  it('so vale para quem lidera: o discipulo cuidador segue no rodizio comum', () => {
+    const result = semanaReal()
+    const dasDiscipulas = ['leticia', 'lethicia', 'paty'].map(
+      (id) => result.assignments.filter((a) => a.caregiverId === id).length,
+    )
+    // As 8 pessoas que sobraram, divididas entre as tres.
+    expect(dasDiscipulas.reduce((soma, n) => soma + n, 0)).toBe(8)
+  })
+
+  it('nao tira a unica pessoa de outro cuidador para cumprir a regra', () => {
+    // Grupo pequeno: dar a irma a lider deixaria a discipula sem ninguem para
+    // cuidar. Ficar sem ninguem pesa mais que a regra.
+    const participants = [
+      person('lider', 'leader', 'female'),
+      person('d1', 'disciple', 'female'),
+      person('m1', 'member', 'female'),
+    ]
+    const result = generateDistribution(
+      baseInput({ participants, fixedLinks: [{ discipleId: 'd1', leaderId: 'lider' }] }),
+    )
+    const pool = result.pools.find((p) => p.gender === 'female')!
+
+    expect(pool.loads.map((l) => l.total).sort()).toEqual([1, 1])
+    expect(result.assignments).toContainEqual({
+      caregiverId: 'd1',
+      caredForId: 'm1',
+      origin: 'rotation',
+    })
+  })
+
+  it('avisa quando nao ha ninguem do GC que possa ficar com o lider', () => {
+    // Existe um irmao, mas uma restricao o separa do lider: a regra nao tem
+    // como ser cumprida, e isso precisa aparecer.
+    const participants = [
+      person('lider', 'leader', 'male'),
+      person('d1', 'disciple', 'male'),
+      person('d2', 'disciple', 'male'),
+      person('m1', 'member', 'male'),
+    ]
+    const result = generateDistribution(
+      baseInput({
+        participants,
+        fixedLinks: [
+          { discipleId: 'd1', leaderId: 'lider' },
+          { discipleId: 'd2', leaderId: 'lider' },
+        ],
+        restrictions: [{ a: 'lider', b: 'm1' }],
+      }),
+    )
+    const pool = result.pools.find((p) => p.gender === 'male')!
+
+    expect(result.assignments.some((a) => a.caregiverId === 'lider' && a.caredForId === 'm1')).toBe(
+      false,
+    )
+    expect(pool.warnings.some((w) => w.includes('so com os proprios discipulos'))).toBe(true)
   })
 })

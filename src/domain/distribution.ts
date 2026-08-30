@@ -100,9 +100,7 @@ export interface DistributionResult {
 }
 
 export type DistributionErrorCode =
-  | 'PENDING_CARE_GENDER'
-  | 'NO_CAREGIVER_FOR_GENDER'
-  | 'NO_PARTICIPANTS'
+  'PENDING_CARE_GENDER' | 'NO_CAREGIVER_FOR_GENDER' | 'NO_PARTICIPANTS'
 
 export class DistributionError extends Error {
   code: DistributionErrorCode
@@ -284,18 +282,40 @@ function buildPool(ctx: PoolContext): {
 
   const remaining = caredFor.filter((p) => !assigned.has(p.id))
 
-  // ------------------------------------ 3. rodizio como fluxo de custo minimo
-  // Nos: 0 = origem, 1..C = cuidadores, C+1..C+R = pessoas, ultimo = destino.
+  // ------------------------------- 3. o lider nao cuida so dos proprios discipulos
+  // Quem lidera precisa de pelo menos um irmao ou irma do GC na semana. Sem
+  // isso, um lider com discipulos fixos suficientes para fechar a carga fica a
+  // semana inteira dentro do proprio discipulado e perde o contato com o
+  // grupo - foi o que aconteceu com a lider que tinha tres discipulas e nenhum
+  // cuidado do GC. A vaga e reservada mesmo que ela leve o lider a uma pessoa
+  // acima do piso: e uma pessoa a mais de proposito, nao um desequilibrio.
+  const doGc = (person: Participant) => person.role === 'member'
+  const gcDisponivel = remaining.some(doGc)
+  const precisaDoGc = (caregiver: Participant) => caregiver.role === 'leader' && gcDisponivel
+  const lideres = caregivers.filter(precisaDoGc)
+
+  // ------------------------------------ 4. rodizio como fluxo de custo minimo
+  // Nos: 0 = origem, 1..C = cuidadores, depois uma vaga do GC por lider, depois
+  // as pessoas, e o destino no fim.
   const SOURCE = 0
-  const SINK = caregivers.length + remaining.length + 1
   const caregiverNode = (index: number) => index + 1
-  const personNode = (index: number) => caregivers.length + index + 1
+  const gcSlotNode = (index: number) => caregivers.length + index + 1
+  const personNode = (index: number) => caregivers.length + lideres.length + index + 1
+  const SINK = caregivers.length + lideres.length + remaining.length + 1
 
   const flow = new MinCostFlow(SINK + 1)
 
-  // Bonus alto para saturar a carga minima antes de qualquer vaga extra: e o
-  // que garante que ninguem fique abaixo do piso enquanto houver gente para
-  // cuidar.
+  // Tres bonus em escada, do mais importante para o menos - e a ordem em que o
+  // fluxo resolve os empates:
+  //
+  //   1. ninguem fica sem ninguem para cuidar;
+  //   2. o lider tem alguem do GC, e nao so os proprios discipulos;
+  //   3. todo mundo chega ao piso da carga.
+  //
+  // A escada importa: sem ela, a vaga do GC do lider tiraria a unica pessoa de
+  // outro cuidador num grupo pequeno - resolver um problema criando outro.
+  const FIRST_BONUS = 1e14
+  const GC_BONUS = 1e13
   const BASE_BONUS = 1e12
 
   const extraSlotEdges: { caregiverIndex: number; edge: number }[] = []
@@ -303,10 +323,23 @@ function buildPool(ctx: PoolContext): {
   caregivers.forEach((caregiver, index) => {
     const fixed = fixedCount.get(caregiver.id) ?? 0
     const baseCapacity = Math.max(0, baseLoad - fixed)
-    const extraCapacity = Math.max(0, baseLoad + 1 - fixed - baseCapacity)
+    // O lider nunca fica sem uma vaga livre: e nela que entra a pessoa do GC
+    // quando os discipulos fixos ja ocuparam a carga inteira.
+    const minimoLivre = precisaDoGc(caregiver) ? 1 : 0
+    const extraCapacity = Math.max(
+      0,
+      baseLoad + 1 - fixed - baseCapacity,
+      minimoLivre - baseCapacity,
+    )
 
-    if (baseCapacity > 0) {
-      flow.addEdge(SOURCE, caregiverNode(index), baseCapacity, -BASE_BONUS)
+    // Quem ja tem discipulo fixo nao esta ocioso: a primeira vaga privilegiada
+    // e so de quem comecaria a semana sem ninguem.
+    const primeiraVaga = fixed > 0 ? 0 : Math.min(1, baseCapacity)
+    if (primeiraVaga > 0) {
+      flow.addEdge(SOURCE, caregiverNode(index), primeiraVaga, -FIRST_BONUS)
+    }
+    if (baseCapacity - primeiraVaga > 0) {
+      flow.addEdge(SOURCE, caregiverNode(index), baseCapacity - primeiraVaga, -BASE_BONUS)
     }
     if (extraCapacity > 0) {
       // Quem menos absorveu a sobra ate hoje paga menos para absorve-la agora.
@@ -359,7 +392,48 @@ function buildPool(ctx: PoolContext): {
     })
   })
 
+  // A vaga do GC nao aumenta a capacidade do lider: ela e um caminho por dentro
+  // dela, que so alcanca quem nao e discipulo. Assim a carga continua limitada
+  // pelas arestas da origem, e o bonus apenas decide *quem* ocupa uma das vagas.
+  const gcSlotEdges: { caregiverIndex: number; edge: number }[] = []
+
+  lideres.forEach((lider, slotIndex) => {
+    const caregiverIndex = caregivers.indexOf(lider)
+
+    gcSlotEdges.push({
+      caregiverIndex,
+      edge: flow.addEdge(caregiverNode(caregiverIndex), gcSlotNode(slotIndex), 1, -GC_BONUS),
+    })
+
+    remaining.forEach((person, personIndex) => {
+      if (!doGc(person) || isBlocked(lider.id, person.id)) return
+      pairEdges.push({
+        caregiverIndex,
+        personIndex,
+        edge: flow.addEdge(
+          gcSlotNode(slotIndex),
+          personNode(personIndex),
+          1,
+          pairCost(lider.id, person.id),
+        ),
+      })
+    })
+  })
+
   flow.run(SOURCE, SINK)
+
+  const comGenteDoGc = new Set(
+    gcSlotEdges
+      .filter(({ edge }) => flow.edges[edge].flow > 0)
+      .map(({ caregiverIndex }) => caregivers[caregiverIndex].id),
+  )
+
+  for (const lider of lideres) {
+    if (comGenteDoGc.has(lider.id)) continue
+    warnings.push(
+      `${lider.fullName} ficou so com os proprios discipulos: nao havia ninguem do GC livre para ele nesta semana.`,
+    )
+  }
 
   const chosenByPerson = new Map<number, number>()
   for (const pair of pairEdges) {
@@ -410,11 +484,23 @@ function buildPool(ctx: PoolContext): {
   // Alem das vagas extras do arredondamento, quem carrega discipulos fixos
   // acima do piso tambem entra no historico de sobrecarga.
   const extraSlots = Array.from(
-    new Set([...extraSlotsUsed, ...loads.filter((l) => l.total > baseLoad).map((l) => l.caregiverId)]),
+    new Set([
+      ...extraSlotsUsed,
+      ...loads.filter((l) => l.total > baseLoad).map((l) => l.caregiverId),
+    ]),
   )
   const unassigned = caredFor.filter((p) => !assigned.has(p.id)).map((p) => p.fullName)
 
-  const spread = loads.length > 0 ? loads[0].total - loads[loads.length - 1].total : 0
+  // A pessoa do GC que o lider recebeu por regra nao conta como desequilibrio:
+  // ela e o proprio combinado. Avisar dela toda semana ensinaria a liderança a
+  // ignorar o aviso justamente quando ele apontasse um problema de verdade.
+  const porRegra = (load: CaregiverLoad) =>
+    comGenteDoGc.has(load.caregiverId) && (fixedCount.get(load.caregiverId) ?? 0) >= baseLoad
+      ? 1
+      : 0
+  const comparaveis = loads.map((load) => load.total - porRegra(load)).sort((a, b) => b - a)
+
+  const spread = comparaveis.length > 0 ? comparaveis[0] - comparaveis[comparaveis.length - 1] : 0
   if (spread > 1) {
     warnings.push(
       gender === 'male'

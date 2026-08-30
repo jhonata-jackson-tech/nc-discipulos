@@ -647,10 +647,26 @@ docker compose -f docker-compose.yml \
                -f docker-compose.banco-do-host.yml up -d postgrest api web
 ```
 
-As migrations, nesse caso, rodam pelo psql da máquina:
+As migrations, nesse caso, rodam pelo psql da máquina — e não é o `psql` do
+`PATH`. A máquina tem dois PostgreSQL: o do cPanel na 5432 (binários em
+`/usr/bin`, versão 9.2) e o nosso na 5433 (binários em `/opt/pgsql16/bin`).
+Chamar o `psql` errado falha de um jeito confuso, e o `pg_dump` errado recusa
+até o `-d`. O dono do banco `cuidar` é o papel **`pgsql16`**, não `postgres`:
 
 ```bash
-DB_DIR=/opt/cuidar-gc/db PGHOST=/tmp PGPORT=5433 PGDATABASE=cuidar ./scripts/migrate.sh
+cd /opt/cuidar-gc
+set -a && . ./.env && set +a          # as senhas dos papéis de conexão
+sudo -u pgsql16 env PATH="/opt/pgsql16/bin:$PATH" \
+  DB_DIR=/opt/cuidar-gc/db PGHOST=/tmp PGPORT=5433 PGDATABASE=cuidar \
+  AUTHENTICATOR_PASSWORD="$AUTHENTICATOR_PASSWORD" \
+  AUTH_SERVICE_PASSWORD="$AUTH_SERVICE_PASSWORD" \
+  ./scripts/migrate.sh
+```
+
+Antes de aplicar, um dump — o banco é de gente de verdade:
+
+```bash
+sudo -u pgsql16 /opt/pgsql16/bin/pg_dump -p 5433 -d cuidar -f /tmp/cuidar-antes.sql
 ```
 
 O Apache termina o TLS (certificado do `acme.sh`, renovação automática já

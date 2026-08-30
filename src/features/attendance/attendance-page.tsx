@@ -16,6 +16,7 @@ import {
   lastWeekdayOn,
   todayISO,
   weekdayName,
+  weekdayShort,
 } from '@/lib/date'
 import { attendanceHint, attendanceLabel } from '@/lib/labels'
 import type { AttendanceMark } from '@/types/database'
@@ -23,17 +24,17 @@ import { cn } from '@/lib/utils'
 import { PageHeader } from '@/components/common/page-header'
 import { Person } from '@/components/common/person'
 import { CardListSkeleton, ErrorState } from '@/components/common/states'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 const MARCAS: AttendanceMark[] = ['presente', 'justificado', 'ausente']
 
-/** Cada linha da chamada, identificada de um jeito que não colide entre listas. */
+/** Cada linha da lista, identificada de um jeito que não colide entre listas. */
 type Chave = `${'integrante' | 'visitante'}:${string}`
 interface Marcacao {
   marca: AttendanceMark
@@ -42,15 +43,19 @@ interface Marcacao {
 
 const chaveDe = (tipo: 'integrante' | 'visitante', id: string): Chave => `${tipo}:${id}`
 
+/** "1 avisou" e "4 avisaram" - a conta do dia é lida em voz alta. */
+const plural = (quantos: number, um: string, varios: string) =>
+  `${quantos} ${quantos === 1 ? um : varios}`
+
 /**
- * A chamada do fim do GC.
+ * A presença do fim do GC.
  *
  * A tela nasce no último dia de encontro que já passou — quinta, quase sempre;
  * sexta quando o GC foi movido. Todo mundo começa em "faltou" e a liderança
  * marca quem apareceu: é o caminho mais curto quando 21 de 33 vieram, e é o
  * único que não confunde "não veio" com "não terminei de preencher".
  *
- * Salvar de novo no mesmo dia corrige a chamada. Quem chegou atrasado e foi
+ * Salvar de novo no mesmo dia corrige o registro. Quem chegou atrasado e foi
  * lembrado depois não deveria obrigar ninguém a apagar nada.
  */
 export function AttendancePage() {
@@ -68,87 +73,84 @@ export function AttendancePage() {
   const dados = encontro.data
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Presença"
-        description={`O GC é toda ${weekdayName(diaDoGc)}. Quando ele muda de dia, a chamada acompanha.`}
+        description={`O GC é toda ${weekdayName(diaDoGc)}. Quando ele muda de dia, marque no dia em que aconteceu.`}
       />
 
-      {/* ------------------------------------------------------ o dia da chamada */}
+      {/* ------------------------------------------------------- o dia do encontro */}
       <Card>
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <Field
-            label="Dia do encontro"
-            htmlFor="dia-do-encontro"
-            hint={
-              dados?.id
-                ? `Registrado em ${formatDateTime(dados.registradoEm)}${
-                    dados.registradoPor ? ` por ${dados.registradoPor}` : ''
-                  }.`
-                : 'Ainda não há chamada para este dia.'
-            }
-          >
+        <CardContent className="space-y-3 p-3">
+          {/* Os dois dias em que o GC de fato acontece, lado a lado e a um
+              toque. O campo de data continua ali para o resto — mas o resto é
+              exceção, e por isso vem depois e menor. */}
+          <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+            <BotaoDeDia dia={diaDoGc} escolhido={quando === diaDoGc} onEscolher={setQuando} />
+            <BotaoDeDia
+              dia={diaSeguinte}
+              escolhido={quando === diaSeguinte}
+              indisponivel={diaSeguinte > todayISO()}
+              onEscolher={setQuando}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <Label htmlFor="dia-do-encontro" className="text-muted-foreground shrink-0 text-xs">
+              Outro dia de encontro
+            </Label>
             <Input
               id="dia-do-encontro"
               type="date"
               max={todayISO()}
               value={quando}
+              className="h-10 w-auto min-w-40 text-sm"
               onChange={(evento) => setQuando(evento.target.value)}
             />
-          </Field>
-
-          {/* Os dois dias em que o GC de fato acontece, a um toque. O campo de
-              data continua ali para o resto — mas o resto é exceção. */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={quando === diaDoGc ? 'default' : 'outline'}
-              onClick={() => setQuando(diaDoGc)}
-            >
-              {weekdayName(diaDoGc)}, {formatDate(diaDoGc)}
-            </Button>
-            <Button
-              variant={quando === diaSeguinte ? 'default' : 'outline'}
-              disabled={diaSeguinte > todayISO()}
-              onClick={() => setQuando(diaSeguinte)}
-            >
-              {weekdayName(diaSeguinte)}, {formatDate(diaSeguinte)}
-            </Button>
           </div>
+
+          <p className="text-muted-foreground text-xs">
+            {dados?.id
+              ? `Registrada em ${formatDateTime(dados.registradoEm)}${
+                  dados.registradoPor ? ` por ${dados.registradoPor}` : ''
+                }.`
+              : 'Ainda não há presença registrada neste dia.'}
+          </p>
         </CardContent>
       </Card>
 
       {encontro.isLoading && <CardListSkeleton rows={4} />}
       {encontro.isError && <ErrorState error={encontro.error} onRetry={() => encontro.refetch()} />}
 
-      {/* A chamada de cada dia é uma folha em branco própria: trocar de data
+      {/* A presença de cada dia é uma folha em branco própria: trocar de data
           remonta o componente, para nenhuma marca do dia anterior sobreviver. */}
-      {dados && <ChamadaDoDia key={quando} quando={quando} encontro={dados} editavel={isLeader} />}
+      {dados && <PresencaDoDia key={quando} quando={quando} encontro={dados} editavel={isLeader} />}
 
       {/* --------------------------------------------------- os encontros anteriores */}
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="size-4" aria-hidden />
             Encontros anteriores
           </CardTitle>
-          <CardDescription>Toque em um deles para abrir ou corrigir a chamada.</CardDescription>
+          <CardDescription>Toque em um deles para abrir ou corrigir a presença.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-2">
           {encontros.isSuccess && encontros.data.length === 0 && (
             <EmptyState
               icon={CalendarCheck}
-              title="Nenhuma chamada registrada ainda"
+              title="Nenhuma presença registrada ainda"
               description="A primeira que você salvar aparece aqui, com os números do dia."
             />
           )}
 
-          <ul className="space-y-2">
+          <ul className="divide-border divide-y">
             {encontros.data?.map((registro) => (
               <li
                 key={registro.id}
                 className={cn(
-                  'border-border flex flex-wrap items-center gap-3 rounded-lg border p-3',
-                  registro.quando === quando && 'border-primary',
+                  'flex items-center gap-2 py-2',
+                  registro.quando === quando && 'text-foreground',
                 )}
               >
                 <button
@@ -156,34 +158,32 @@ export function AttendancePage() {
                   className="min-w-0 flex-1 text-left"
                   onClick={() => setQuando(registro.quando)}
                 >
-                  <span className="block text-sm font-medium">
-                    {weekdayName(registro.quando)}, {formatDate(registro.quando)}
+                  <span
+                    className={cn(
+                      'block text-sm font-medium capitalize',
+                      registro.quando === quando && 'text-primary',
+                    )}
+                  >
+                    {weekdayShort(registro.quando)}, {formatDate(registro.quando)}
                   </span>
-                  {registro.anotacao && (
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {registro.anotacao}
-                    </span>
-                  )}
+                  <span className="text-muted-foreground block truncate text-xs">
+                    {plural(registro.presentes, 'veio', 'vieram')}
+                    {registro.justificados > 0 &&
+                      ` · ${plural(registro.justificados, 'avisou', 'avisaram')}`}
+                    {registro.ausentes > 0 &&
+                      ` · ${plural(registro.ausentes, 'faltou', 'faltaram')}`}
+                    {registro.visitantes > 0 &&
+                      ` · ${plural(registro.visitantes, 'visitante', 'visitantes')}`}
+                    {registro.anotacao && ` · ${registro.anotacao}`}
+                  </span>
                 </button>
-
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="success">{registro.presentes} vieram</Badge>
-                  {registro.justificados > 0 && (
-                    <Badge variant="neutral">{registro.justificados} avisaram</Badge>
-                  )}
-                  {registro.ausentes > 0 && (
-                    <Badge variant="outline">{registro.ausentes} faltaram</Badge>
-                  )}
-                  {registro.visitantes > 0 && (
-                    <Badge variant="info">{registro.visitantes} visitante(s)</Badge>
-                  )}
-                </span>
 
                 {isLeader && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Apagar a chamada de ${formatDate(registro.quando)}`}
+                    className="shrink-0"
+                    aria-label={`Apagar a presença de ${formatDate(registro.quando)}`}
                     onClick={() => apagar.mutate(registro.id)}
                   >
                     <Trash2 aria-hidden />
@@ -195,6 +195,39 @@ export function AttendancePage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+/** O dia do GC como um cartão de toque: nome do dia em cima, data embaixo. */
+function BotaoDeDia({
+  dia,
+  escolhido,
+  indisponivel,
+  onEscolher,
+}: {
+  dia: string
+  escolhido: boolean
+  indisponivel?: boolean
+  onEscolher: (dia: string) => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={escolhido}
+      disabled={indisponivel}
+      onClick={() => onEscolher(dia)}
+      className={cn(
+        'rounded-lg border px-3 py-2 text-left transition-colors disabled:opacity-40',
+        escolhido
+          ? 'border-primary bg-primary-soft text-accent-foreground'
+          : 'border-input hover:bg-secondary',
+      )}
+    >
+      <span className="block text-sm font-medium capitalize">{weekdayShort(dia)}</span>
+      <span className={cn('block text-xs', escolhido ? 'opacity-80' : 'text-muted-foreground')}>
+        {formatDate(dia)}
+      </span>
+    </button>
   )
 }
 
@@ -212,7 +245,7 @@ function marcasIniciais(encontro: Encontro): Record<string, Marcacao> {
   return inicial
 }
 
-function ChamadaDoDia({
+function PresencaDoDia({
   quando,
   encontro,
   editavel,
@@ -258,6 +291,18 @@ function ChamadaDoDia({
     }
   }, [marcas])
 
+  /** Antes do primeiro toque, "33 faltaram" seria uma acusação sem encontro. */
+  const intocada = !encontro.id && contagem.presentes === 0 && contagem.justificados === 0
+
+  /** Só o que aconteceu: "0 faltaram" ocupa a linha sem dizer nada. */
+  const resumo = [
+    contagem.justificados > 0 && plural(contagem.justificados, 'avisou', 'avisaram'),
+    contagem.ausentes > 0 && plural(contagem.ausentes, 'faltou', 'faltaram'),
+    contagem.visitantes > 0 && plural(contagem.visitantes, 'visitante', 'visitantes'),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   const enviar = () => {
     const payload: MarcaEnviada[] = Object.entries(marcas).map(([chave, valor]) => {
       const [tipo, id] = chave.split(':') as ['integrante' | 'visitante', string]
@@ -273,68 +318,65 @@ function ChamadaDoDia({
 
   return (
     <>
-      {/* ------------------------------------------------------- a conta do dia */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
-          <div>
-            <p className="font-display tabular text-3xl font-bold">
-              {contagem.presentes}
-              <span className="text-muted-foreground text-lg font-medium">
-                {' '}
-                de {contagem.elenco}
-              </span>
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {contagem.justificados} avisaram · {contagem.ausentes} faltaram
-              {contagem.visitantes > 0 && ` · ${contagem.visitantes} visitante(s)`}
-            </p>
-          </div>
+      {/* ------------------------------------------------------- a conta do dia
+          Gruda no topo enquanto a lista rola: com 33 nomes, o número é a única
+          forma de saber que está quase acabando sem voltar lá em cima. */}
+      <div className="bg-background/95 sticky top-0 z-20 -mx-4 flex items-center justify-between gap-3 border-b px-4 py-2.5 backdrop-blur lg:-mx-8 lg:px-8">
+        <div className="min-w-0 flex-1">
+          <p className="font-display tabular text-xl leading-none font-bold">
+            {contagem.presentes}
+            <span className="text-muted-foreground text-sm font-medium"> de {contagem.elenco}</span>
+          </p>
+          <p className="text-muted-foreground mt-1 truncate text-xs">
+            {intocada ? 'Toque em quem veio' : resumo || 'Todo mundo veio'}
+          </p>
+        </div>
 
-          {editavel && (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => todosComo('presente')}>
-                Todos vieram
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => todosComo('ausente')}>
-                Limpar
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {editavel && (
+          <div className="flex shrink-0 gap-2">
+            <Button variant="outline" size="sm" onClick={() => todosComo('presente')}>
+              Todos vieram
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => todosComo('ausente')}>
+              Limpar
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* -------------------------------------------------------------- o elenco */}
       <Card>
-        <CardHeader>
+        <CardHeader className="p-3 pb-2">
           <CardTitle className="flex items-center gap-2">
             <Users className="size-4" aria-hidden />O GC
           </CardTitle>
-          <CardDescription>Toque em quem esteve no encontro.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {encontro.integrantes.map((pessoa) => {
-            const chave = chaveDe('integrante', pessoa.id)
-            const atual = marcas[chave]
-            return (
-              <LinhaDaChamada
-                key={pessoa.id}
-                nome={pessoa.nomeCompleto}
-                foto={pessoa.foto}
-                marca={atual?.marca ?? 'ausente'}
-                justificativa={atual?.justificativa ?? ''}
-                editavel={editavel}
-                onMarcar={(marca) => marcar(chave, marca)}
-                onJustificar={(texto) => justificar(chave, texto)}
-              />
-            )
-          })}
+        <CardContent className="p-0">
+          <ul className="divide-border divide-y">
+            {encontro.integrantes.map((pessoa) => {
+              const chave = chaveDe('integrante', pessoa.id)
+              const atual = marcas[chave]
+              return (
+                <LinhaDePresenca
+                  key={pessoa.id}
+                  nome={pessoa.nomeCompleto}
+                  foto={pessoa.foto}
+                  marca={atual?.marca ?? 'ausente'}
+                  justificativa={atual?.justificativa ?? ''}
+                  editavel={editavel}
+                  onMarcar={(marca) => marcar(chave, marca)}
+                  onJustificar={(texto) => justificar(chave, texto)}
+                />
+              )
+            })}
+          </ul>
         </CardContent>
       </Card>
 
       {/* ---------------------------------------------------------- os visitantes */}
       {encontro.visitantes.length > 0 && (
         <Card>
-          <CardHeader>
+          <CardHeader className="p-3 pb-2">
             <CardTitle className="flex items-center gap-2">
               <DoorOpen className="size-4" aria-hidden />
               Visitantes
@@ -343,30 +385,32 @@ function ChamadaDoDia({
               Eles não entram no rodízio de cuidado — mas estiveram na sala, e isso conta.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {encontro.visitantes.map((visitante) => {
-              const chave = chaveDe('visitante', visitante.id)
-              return (
-                <LinhaDaChamada
-                  key={visitante.id}
-                  nome={visitante.nome}
-                  detalhe={`Visitou em ${formatDate(visitante.primeiraVisita)}`}
-                  marca={marcas[chave]?.marca ?? 'ausente'}
-                  justificativa=""
-                  editavel={editavel}
-                  semJustificativa
-                  onMarcar={(marca) => marcar(chave, marca)}
-                  onJustificar={() => {}}
-                />
-              )
-            })}
+          <CardContent className="p-0">
+            <ul className="divide-border divide-y">
+              {encontro.visitantes.map((visitante) => {
+                const chave = chaveDe('visitante', visitante.id)
+                return (
+                  <LinhaDePresenca
+                    key={visitante.id}
+                    nome={visitante.nome}
+                    detalhe={`Visitou em ${formatDate(visitante.primeiraVisita)}`}
+                    marca={marcas[chave]?.marca ?? 'ausente'}
+                    justificativa=""
+                    editavel={editavel}
+                    semJustificativa
+                    onMarcar={(marca) => marcar(chave, marca)}
+                    onJustificar={() => {}}
+                  />
+                )
+              })}
+            </ul>
           </CardContent>
         </Card>
       )}
 
       {editavel && (
         <Card>
-          <CardContent className="space-y-4 p-4">
+          <CardContent className="space-y-3 p-4">
             <Field
               label="Anotação do encontro"
               htmlFor="anotacao-encontro"
@@ -382,7 +426,7 @@ function ChamadaDoDia({
 
             <Button className="w-full" loading={salvar.isPending} onClick={enviar}>
               <CalendarCheck aria-hidden />
-              {encontro.id ? 'Salvar correções' : 'Registrar chamada'}
+              {encontro.id ? 'Salvar correções' : 'Registrar presença'}
             </Button>
           </CardContent>
         </Card>
@@ -391,7 +435,15 @@ function ChamadaDoDia({
   )
 }
 
-function LinhaDaChamada({
+/**
+ * Uma pessoa por linha: nome à esquerda, as três marcas à direita.
+ *
+ * As marcas são um seletor só, com as divisórias por dentro — três botões
+ * soltos viravam três caixas por pessoa, e trinta e três pessoas viravam uma
+ * tela de rolar sem fim. Quando a largura não dá, o seletor cai para a linha
+ * de baixo em vez de espremer o nome até "A…".
+ */
+function LinhaDePresenca({
   nome,
   detalhe,
   foto,
@@ -413,49 +465,51 @@ function LinhaDaChamada({
   onJustificar: (texto: string) => void
 }) {
   return (
-    <div className="border-border rounded-lg border p-3">
-      {/* No celular o nome fica em cima e os três botões embaixo: lado a lado,
-          eles espremiam o nome até "A…" - e uma chamada em que não dá para ler
-          de quem é a linha não é uma chamada. */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <Person name={nome} detail={detalhe} photo={foto} size="sm" className="min-w-0 sm:flex-1" />
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2">
+      <Person
+        name={nome}
+        detail={detalhe}
+        photo={foto}
+        size="sm"
+        className="min-w-[8rem] flex-1 gap-2"
+      />
 
-        <div
-          className="grid grid-cols-3 gap-1 sm:flex sm:shrink-0"
-          role="radiogroup"
-          aria-label={`Presença de ${nome}`}
-        >
-          {MARCAS.map((opcao) => {
-            const escolhido = marca === opcao
-            return (
-              <button
-                key={opcao}
-                type="button"
-                role="radio"
-                aria-checked={escolhido}
-                title={attendanceHint[opcao]}
-                disabled={!editavel}
-                onClick={() => onMarcar(opcao)}
-                className={cn(
-                  'min-h-11 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60',
-                  escolhido && opcao === 'presente' && 'border-success bg-success/15 text-success',
-                  escolhido && opcao === 'justificado' && 'border-warning bg-warning/18',
-                  escolhido && opcao === 'ausente' && 'border-input bg-secondary',
-                  !escolhido && 'text-muted-foreground hover:bg-secondary',
-                )}
-              >
-                {attendanceLabel[opcao]}
-              </button>
-            )
-          })}
-        </div>
+      <div
+        className="border-input flex shrink-0 overflow-hidden rounded-lg border"
+        role="radiogroup"
+        aria-label={`Presença de ${nome}`}
+      >
+        {MARCAS.map((opcao, indice) => {
+          const escolhido = marca === opcao
+          return (
+            <button
+              key={opcao}
+              type="button"
+              role="radio"
+              aria-checked={escolhido}
+              title={attendanceHint[opcao]}
+              disabled={!editavel}
+              onClick={() => onMarcar(opcao)}
+              className={cn(
+                'min-h-11 px-2 text-[11px] font-medium transition-colors disabled:opacity-60',
+                indice > 0 && 'border-input border-l',
+                escolhido && opcao === 'presente' && 'bg-success/18 text-success',
+                escolhido && opcao === 'justificado' && 'bg-warning/20 text-foreground',
+                escolhido && opcao === 'ausente' && 'bg-secondary text-foreground',
+                !escolhido && 'text-muted-foreground hover:bg-secondary',
+              )}
+            >
+              {attendanceLabel[opcao]}
+            </button>
+          )
+        })}
       </div>
 
       {/* O motivo só é perguntado de quem avisou: é a informação que separa
           uma viagem de um afastamento, e ela se perde se não for escrita agora. */}
       {marca === 'justificado' && !semJustificativa && (
         <Input
-          className="mt-2"
+          className="h-10 w-full text-sm"
           placeholder="Motivo (opcional): viagem, trabalho, doente…"
           value={justificativa}
           disabled={!editavel}
@@ -463,6 +517,6 @@ function LinhaDaChamada({
           onChange={(evento) => onJustificar(evento.target.value)}
         />
       )}
-    </div>
+    </li>
   )
 }

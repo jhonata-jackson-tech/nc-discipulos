@@ -85,7 +85,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Presença',
     icon: CalendarCheck,
     roles: ['leader', 'supervisor'],
-    description: 'A chamada do fim do GC',
+    description: 'Quem esteve no GC, encontro a encontro',
   },
   {
     to: '/visitantes',

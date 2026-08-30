@@ -43,7 +43,7 @@ export function endOfWeek(iso: string = todayISO()): string {
 /**
  * O ultimo dia de encontro que ja aconteceu - hoje, se hoje for ele.
  *
- * O GC e na quinta. Na sexta de manha, a chamada que a lideranca quer abrir e
+ * O GC e na quinta. Na sexta de manha, a presenca que a lideranca quer abrir e
  * a de ontem; na quarta, a da quinta passada. Uma data que sempre nasce certa
  * evita o erro mais caro dessa tela: registrar a presenca no dia errado.
  */
@@ -121,4 +121,9 @@ export function birthdayInWindow(birthDate: string, days = 14): boolean {
   if (next.getTime() < today.getTime()) next.setUTCFullYear(next.getUTCFullYear() + 1)
   const diff = Math.round((next.getTime() - today.getTime()) / 86_400_000)
   return diff >= 0 && diff <= days
+}
+
+/** "quinta" - o dia da semana sem o "-feira", para caber em botao. */
+export function weekdayShort(iso: string): string {
+  return weekdayName(iso).replace('-feira', '')
 }

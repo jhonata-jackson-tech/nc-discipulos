@@ -6,7 +6,7 @@ test.skip(!state.ready, 'Ambiente de teste não configurado.')
 /**
  * Desktop e celular compartilham o mesmo banco. Cada projeto precisa do seu
  * nome e do seu dia de encontro, senão um sobrescreve o cenário do outro -
- * a chamada é única por grupo e por dia.
+ * a presença é única por grupo e por dia.
  */
 const diaDoEncontro = (projeto: string) => (projeto === 'desktop' ? '2026-08-20' : '2026-08-13')
 
@@ -95,15 +95,15 @@ test.describe('visitantes', () => {
   })
 })
 
-test.describe('chamada do GC', () => {
+test.describe('presença do GC', () => {
   test('registra a presença do encontro e ela chega ao relatório', async ({ page }, testInfo) => {
     const dia = diaDoEncontro(testInfo.project.name)
 
     await signIn(page, 'leader')
     await page.goto('/presenca')
 
-    await page.getByLabel('Dia do encontro').fill(dia)
-    await expect(page.getByText('Ainda não há chamada para este dia.')).toBeVisible()
+    await page.getByLabel('Outro dia de encontro').fill(dia)
+    await expect(page.getByText('Ainda não há presença registrada neste dia.')).toBeVisible()
 
     // O elenco vem da tela, não de um número fixo: os outros testes deste
     // arquivo colocam gente nova no GC, e um "6" escrito à mão só valeria
@@ -126,14 +126,14 @@ test.describe('chamada do GC', () => {
     await expect(page.getByText(`${elenco - 1} de ${elenco}`)).toBeVisible()
 
     await page.getByLabel('Anotação do encontro').fill('Talk sobre gratidão.')
-    await page.getByRole('button', { name: 'Registrar chamada' }).click()
+    await page.getByRole('button', { name: 'Registrar presença' }).click()
 
-    await expect(page.getByText('Chamada registrada.')).toBeVisible()
+    await expect(page.getByText('Presença registrada.')).toBeVisible()
     await expect(page.getByText(`${elenco - 1} vieram`).first()).toBeVisible()
 
     // Reabrir o mesmo dia devolve exatamente o que foi salvo.
     await page.reload()
-    await page.getByLabel('Dia do encontro').fill(dia)
+    await page.getByLabel('Outro dia de encontro').fill(dia)
     await expect(page.getByText(`${elenco - 1} de ${elenco}`)).toBeVisible()
 
     // E o relatório enxerga o encontro.
@@ -142,7 +142,7 @@ test.describe('chamada do GC', () => {
     await expect(page.getByText('Média por encontro')).toBeVisible()
   })
 
-  test('o discípulo não alcança a chamada', async ({ page }) => {
+  test('o discípulo não alcança a presença', async ({ page }) => {
     await signIn(page, 'disciple')
 
     await page.goto('/presenca')

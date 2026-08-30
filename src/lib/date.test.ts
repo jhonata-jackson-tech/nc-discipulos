@@ -40,7 +40,7 @@ describe('o dia do encontro do GC', () => {
   })
 
   it('na sexta, ainda aponta para a quinta que acabou de passar', () => {
-    // E o caso que mais importa: quem abre a chamada na manha seguinte quer a
+    // E o caso que mais importa: quem abre a presenca na manha seguinte quer a
     // de ontem, nao a da semana que vem.
     expect(lastWeekdayOn(4, '2026-08-28')).toBe('2026-08-27')
   })

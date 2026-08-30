@@ -121,8 +121,8 @@ export function PresencaSection({ encontros }: { encontros: number }) {
         <CardContent className="p-0">
           <EmptyState
             icon={CalendarCheck}
-            title="Nenhuma chamada registrada ainda"
-            description="Assim que a liderança registrar a primeira chamada, esta parte do relatório se enche sozinha."
+            title="Nenhuma presença registrada ainda"
+            description="Assim que a liderança registrar a primeira presença, esta parte do relatório se enche sozinha."
           />
         </CardContent>
       </Card>
@@ -260,7 +260,7 @@ export function PresencaSection({ encontros }: { encontros: number }) {
                     <span className="text-muted-foreground text-xs">
                       {pessoa.ultimaPresenca
                         ? `veio pela última vez em ${diaMes(pessoa.ultimaPresenca)}`
-                        : 'nunca apareceu na chamada'}
+                        : 'nunca apareceu no GC'}
                     </span>
                     <Badge variant="warning">{pessoa.faltasSeguidas}</Badge>
                   </span>

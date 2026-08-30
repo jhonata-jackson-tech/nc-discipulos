@@ -168,7 +168,7 @@ export function ReportsPage() {
 
       {dados && dados.semanas.length > 0 && <Conteudo dados={dados} />}
 
-      {/* A presença vive fora do bloco acima de propósito: a chamada do GC não
+      {/* A presença vive fora do bloco acima de propósito: a presença do GC não
           depende de nenhuma semana de cuidado publicada, e um GC que ainda não
           distribuiu cuidado nenhum já tem gente aparecendo na sala. O recorte
           vira encontros — uma semana sem GC não é uma semana com zero

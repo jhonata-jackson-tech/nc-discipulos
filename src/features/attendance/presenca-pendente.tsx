@@ -10,17 +10,17 @@ import { Button } from '@/components/ui/button'
 const DIAS_DE_LEMBRETE = 3
 
 /**
- * "A chamada de quinta ainda não foi registrada."
+ * "A presença de quinta ainda não foi registrada."
  *
  * O aviso existe porque o custo de esquecer é assimétrico: registrar a
  * presença leva um minuto no fim do GC e é impossível de reconstruir uma
  * semana depois — ninguém lembra quem estava na sala.
  *
  * Ele conta a sexta como o mesmo encontro: quando o GC é movido por um
- * imprevisto, a chamada de sexta resolve a quinta, e cobrar as duas seria
+ * imprevisto, a presença de sexta resolve a quinta, e cobrar as duas seria
  * cobrar um GC que não houve.
  */
-export function ChamadaPendente() {
+export function PresencaPendente() {
   const { group, isLeader } = useSession()
   const diaFixo = group?.meeting_weekday ?? 4
   const encontros = useMeetings(6)
@@ -43,7 +43,7 @@ export function ChamadaPendente() {
       <CalendarCheck aria-hidden />
       <div className="min-w-0 flex-1">
         <AlertTitle>
-          A chamada de {weekdayName(diaDoGc)}, {formatDate(diaDoGc)}, ainda não foi registrada
+          A presença de {weekdayName(diaDoGc)}, {formatDate(diaDoGc)}, ainda não foi registrada
         </AlertTitle>
         <AlertDescription>
           Leva um minuto agora, e é impossível reconstruir daqui a uma semana.

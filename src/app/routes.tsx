@@ -134,7 +134,7 @@ export const router = createBrowserRouter([
                     element: <RequireRole roles={['leader', 'supervisor']} />,
                     children: [
                       { path: '/integrantes', element: <MembersPage /> },
-                      // Visitante e chamada são leitura da liderança inteira;
+                      // Visitante e presença são leitura da liderança inteira;
                       // escrever, só líder — a RLS e as funções decidem isso,
                       // e a tela apenas esconde os botões.
                       { path: '/visitantes', element: <VisitorsPage /> },

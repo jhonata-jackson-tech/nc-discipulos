@@ -142,7 +142,7 @@ export const attendanceLabel: Record<AttendanceMark, string> = {
   ausente: 'Faltou',
 }
 
-/** Uma palavra a mais, para a chamada não virar chute. */
+/** Uma palavra a mais, para a marcação não virar chute. */
 export const attendanceHint: Record<AttendanceMark, string> = {
   presente: 'Esteve no GC',
   justificado: 'Não veio, mas avisou',

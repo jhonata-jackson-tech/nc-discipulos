@@ -24,11 +24,11 @@ export interface PresencaVisitante {
 }
 
 /**
- * A chamada de um dia, já montada pelo banco.
+ * A presença de um dia, já montada pelo banco.
  *
  * `id` nulo significa que aquele encontro ainda não foi registrado — a lista
  * vem inteira mesmo assim, com todo mundo em "faltou". É o estado inicial
- * correto: a chamada começa vazia e se preenche com quem apareceu.
+ * correto: a lista começa vazia e se preenche com quem apareceu.
  */
 export interface Encontro {
   id: string | null
@@ -96,7 +96,7 @@ export interface MarcaEnviada {
 }
 
 /**
- * Salva a chamada inteira de uma vez.
+ * Salva a presença inteira de uma vez.
  *
  * A tela manda a lista completa, e não apenas quem veio: no banco, uma foto
  * pela metade não distingue "faltou" de "ainda não marquei". Salvar de novo no
@@ -128,7 +128,7 @@ export function useSaveAttendance() {
       queryClient.invalidateQueries({ queryKey: ['encontro'] })
       queryClient.invalidateQueries({ queryKey: ['encontros'] })
       queryClient.invalidateQueries({ queryKey: ['relatorio-presenca'] })
-      toast.success('Chamada registrada.')
+      toast.success('Presença registrada.')
     },
     onError: (error) => toast.error(friendlyError(error)),
   })

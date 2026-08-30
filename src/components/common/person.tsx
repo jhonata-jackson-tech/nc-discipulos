@@ -18,7 +18,9 @@ export function Person({ name, detail, className, size = 'md', photo }: PersonPr
         <AvatarFallback>{initials(name)}</AvatarFallback>
       </Avatar>
       <span className="min-w-0 leading-tight">
-        <span className={cn('block truncate font-medium', size === 'sm' && 'text-sm')}>{name}</span>
+        <span title={name} className={cn('block truncate font-medium', size === 'sm' && 'text-sm')}>
+          {name}
+        </span>
         {detail && <span className="text-muted-foreground block truncate text-xs">{detail}</span>}
       </span>
     </span>

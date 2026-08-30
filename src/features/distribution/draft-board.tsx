@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CardListSkeleton } from '@/components/common/states'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface DraftBoardProps {
@@ -32,13 +32,7 @@ interface DraftBoardProps {
  * A lista de destinos e sempre restrita ao mesmo genero de cuidado - e o banco
  * recusa qualquer tentativa que passe por cima disso.
  */
-export function DraftBoard({
-  week,
-  assignments,
-  loading,
-  onMove,
-  onReassign,
-}: DraftBoardProps) {
+export function DraftBoard({ week, assignments, loading, onMove, onReassign }: DraftBoardProps) {
   const { data: members } = useActiveMembers()
   const [dragging, setDragging] = React.useState<AssignmentWithPeople | null>(null)
   const [hovered, setHovered] = React.useState<string | null>(null)
@@ -60,7 +54,9 @@ export function DraftBoard({
       (member) => ['leader', 'disciple'].includes(member.role) && !ids.has(member.id),
     )
     const unique = new Map([...fromAssignments, ...extras].map((person) => [person.id, person]))
-    return Array.from(unique.values()).sort((a, b) => a.full_name.localeCompare(b.full_name, 'pt-BR'))
+    return Array.from(unique.values()).sort((a, b) =>
+      a.full_name.localeCompare(b.full_name, 'pt-BR'),
+    )
   }, [assignments, members])
 
   const byCaregiver = React.useMemo(() => {
@@ -118,7 +114,9 @@ export function DraftBoard({
         {caregivers.map((caregiver) => {
           const list = byCaregiver.get(caregiver.id) ?? []
           const canDrop =
-            editable && dragging !== null && dragging.cared_for.care_gender === caregiver.care_gender
+            editable &&
+            dragging !== null &&
+            dragging.cared_for.care_gender === caregiver.care_gender
 
           return (
             <Card
@@ -128,7 +126,9 @@ export function DraftBoard({
                 event.preventDefault()
                 setHovered(caregiver.id)
               }}
-              onDragLeave={() => setHovered((current) => (current === caregiver.id ? null : current))}
+              onDragLeave={() =>
+                setHovered((current) => (current === caregiver.id ? null : current))
+              }
               onDrop={() => handleDrop(caregiver.id)}
               className={cn(
                 'transition-colors',
@@ -143,7 +143,9 @@ export function DraftBoard({
                 <div className="min-w-0 flex-1">
                   <CardTitle className="truncate text-sm">{caregiver.full_name}</CardTitle>
                   <p className="text-muted-foreground text-xs">
-                    {caregiver.care_gender ? careGenderShort[caregiver.care_gender as CareGender] : '--'}
+                    {caregiver.care_gender
+                      ? careGenderShort[caregiver.care_gender as CareGender]
+                      : '--'}
                   </p>
                 </div>
                 <Badge variant={list.length === 0 ? 'outline' : 'neutral'}>{list.length}</Badge>
@@ -166,36 +168,40 @@ export function DraftBoard({
                       setHovered(null)
                     }}
                     className={cn(
-                      'border-border bg-card rounded-lg border p-2.5',
+                      'border-border bg-card flex items-center gap-2 rounded-lg border p-2',
                       editable && 'cursor-grab active:cursor-grabbing',
                       dragging?.id === assignment.id && 'opacity-50',
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      {editable && (
-                        <GripVertical className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                      )}
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {editable && (
+                      <GripVertical className="text-muted-foreground size-4 shrink-0" aria-hidden />
+                    )}
+
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <span className="block truncate text-sm font-medium">
                         {assignment.cared_for.full_name}
                       </span>
-                    </div>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {assignmentOriginLabel[assignment.origin]}
+                      </span>
+                    </span>
 
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {assignmentOriginLabel[assignment.origin]}
-                    </p>
-
+                    {/* O seletor diz "Mover", não o nome de quem já cuida: a
+                        pessoa está dentro da coluna dela, e repetir isso em um
+                        campo de largura cheia dobrava a altura de cada cartão
+                        para não informar nada. */}
                     {editable && (
                       <Select
                         value={assignment.caregiver_id}
                         onValueChange={(value) => mover(assignment, value)}
                       >
                         <SelectTrigger
-                          className="mt-2 h-9 text-xs"
+                          className="h-9 w-auto shrink-0 px-2.5 text-xs"
                           aria-label={`Responsável por ${assignment.cared_for.full_name}`}
                         >
-                          <SelectValue />
+                          Mover
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="w-auto min-w-56">
                           {caregivers
                             .filter(
                               (person) =>

@@ -21,7 +21,7 @@ import {
 import { MemberDialog } from './member-dialog'
 import { InviteDialog } from './invite-dialog'
 import { formatDate } from '@/lib/date'
-import { careGenderShort, memberStatusLabel, roleLabel } from '@/lib/labels'
+import { careGenderShort, memberStatusLabel, roleLabel, roleLabelFor } from '@/lib/labels'
 import type { AppRole, MemberStatus, Profile } from '@/types/database'
 import { PageHeader } from '@/components/common/page-header'
 import { Switch } from '@/components/ui/switch'
@@ -33,8 +33,21 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,8 +170,10 @@ export function MembersPage() {
       )}
 
       <Card>
-        <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
-          <div className="relative">
+        {/* Busca inteira em cima, os dois filtros dividindo a linha de baixo:
+            empilhados, três campos de largura cheia comiam meia tela. */}
+        <CardContent className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
+          <div className="relative col-span-2 sm:col-span-1">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden
@@ -179,7 +194,7 @@ export function MembersPage() {
             <SelectContent>
               {ROLE_FILTERS.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {option === 'all' ? 'Todos os papéis' : roleLabel[option]}
+                  {option === 'all' ? 'Todos' : roleLabel[option]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -207,7 +222,7 @@ export function MembersPage() {
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
             <div>
-              <p className="font-display text-3xl font-bold tabular">{contagem.total}</p>
+              <p className="font-display tabular text-3xl font-bold">{contagem.total}</p>
               <p className="text-muted-foreground text-sm">
                 {contagem.discipulos} discípulo(s) · {contagem.irmaos} irmão(s)
                 {contarLideres && ` · ${contagem.lideres} líder(es)`}
@@ -245,50 +260,56 @@ export function MembersPage() {
         </Card>
       )}
 
-      {/* ------------------------------------------------ cartoes no celular */}
-      <div className="grid gap-3 md:grid-cols-2 lg:hidden">
-        {filtered.map((member) => (
-          // `min-w-0` no cartao: item de grid tem largura minima automatica, e
-          // um e-mail comprido (que nao quebra) esticaria a coluna alem da tela.
-          <Card key={member.id} className="min-w-0 p-4">
-            <div className="flex items-start gap-3">
-              <Person
-                name={member.full_name}
-                photo={member.photo_url}
-                detail={member.email ?? 'Sem e-mail cadastrado'}
-                className="min-w-0 flex-1"
-              />
-              {isLeader && (
-                <MemberActions
-                  member={member}
-                  onEdit={() => openEdit(member)}
-                  onInvite={() => openInvite(member)}
-                  onToggleStatus={() =>
-                    setStatus.mutate({
-                      profileId: member.id,
-                      status: member.status === 'active' ? 'inactive' : 'active',
-                    })
+      {/* ---------------------------------------------------- lista no celular
+          Uma linha por pessoa, não um cartão: papel, gênero de cuidado e
+          acesso cabem numa frase, e trinta e três cartões com quatro etiquetas
+          cada viravam uma tela de rolar sem fim. As etiquetas ficaram só para
+          o que pede ação — o resto virou texto. */}
+      {filtered.length > 0 && (
+        <Card className="lg:hidden">
+          <ul className="divide-border divide-y">
+            {filtered.map((member) => (
+              <li key={member.id} className="flex items-center gap-2 px-3 py-2">
+                <Person
+                  name={member.full_name}
+                  photo={member.photo_url}
+                  detail={
+                    <>
+                      {[
+                        roleLabelFor(member.role, member.care_gender),
+                        member.care_gender && careGenderShort[member.care_gender],
+                        member.user_id ? 'com acesso' : 'sem acesso',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </>
                   }
+                  size="sm"
+                  className="min-w-0 flex-1 gap-2"
                 />
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <RoleBadge role={member.role} gender={member.care_gender} />
-              {member.care_gender ? (
-                <Badge variant="outline">{careGenderShort[member.care_gender]}</Badge>
-              ) : (
-                <Badge variant="warning">Gênero pendente</Badge>
-              )}
-              {member.status === 'inactive' && <Badge variant="neutral">Inativo</Badge>}
-              {member.user_id ? (
-                <Badge variant="success">Com acesso</Badge>
-              ) : (
-                <Badge variant="outline">Sem acesso</Badge>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {!member.care_gender && <Badge variant="warning">Gênero pendente</Badge>}
+                  {member.status === 'inactive' && <Badge variant="neutral">Inativo</Badge>}
+                  {isLeader && (
+                    <MemberActions
+                      member={member}
+                      onEdit={() => openEdit(member)}
+                      onInvite={() => openInvite(member)}
+                      onToggleStatus={() =>
+                        setStatus.mutate({
+                          profileId: member.id,
+                          status: member.status === 'active' ? 'inactive' : 'active',
+                        })
+                      }
+                    />
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* -------------------------------------------------- tabela no desktop */}
       {filtered.length > 0 && (
@@ -307,7 +328,10 @@ export function MembersPage() {
             </TableHeader>
             <TableBody>
               {filtered.map((member) => (
-                <TableRow key={member.id} className={member.status === 'inactive' ? 'opacity-60' : ''}>
+                <TableRow
+                  key={member.id}
+                  className={member.status === 'inactive' ? 'opacity-60' : ''}
+                >
                   <TableCell>
                     <Person
                       name={member.full_name}

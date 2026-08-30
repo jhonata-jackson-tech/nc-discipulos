@@ -31,6 +31,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ActivityResponseBadge } from '@/components/common/badges'
+import { ChamadaPendente } from '@/features/attendance/chamada-pendente'
 import { TransfersInbox } from './transfers-inbox'
 import { GroupProgressCard } from './group-progress-card'
 import { SupervisorOverview } from './supervisor-overview'
@@ -131,6 +132,11 @@ export function MyWeekPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* O lembrete da chamada vem antes do resto: ele tem prazo. Registrar a
+          presença no fim do GC leva um minuto; reconstruir quem estava na sala
+          uma semana depois não tem como. */}
+      <ChamadaPendente />
 
       {pendingTransfers.length > 0 && (
         <Alert variant="info">

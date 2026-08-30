@@ -1,14 +1,39 @@
 import * as React from 'react'
-import { Dica, Figura } from './base'
+import { Dica, Figura, type ItemLegenda } from './base'
 import { useLargura } from './medidas'
+
+export interface CelulaMapa {
+  rotulo: string
+  total: number
+  feitos: number
+  /**
+   * Cor propria da celula, para quando a medida nao e uma proporcao.
+   *
+   * A presenca no encontro e categorica - veio, avisou, faltou - e nao um
+   * "quanto do combinado aconteceu". Sem esta saida, o mapa pintaria "avisou"
+   * com o mesmo tom de "faltou", que e justamente a distincao que ele existe
+   * para mostrar.
+   */
+  tom?: string
+  /** O que a dica diz, quando "3 de 4" nao e a frase certa. */
+  detalhe?: string
+}
 
 export interface LinhaMapa {
   id: string
   nome: string
   /** Um selo curto no fim da linha - por exemplo, semanas seguidas. */
   selo?: React.ReactNode
-  celulas: { rotulo: string; total: number; feitos: number }[]
+  celulas: CelulaMapa[]
 }
+
+/** A legenda do cuidado: quanto do combinado da semana aconteceu. */
+const LEGENDA_CUIDADO: ItemLegenda[] = [
+  { cor: 'var(--chart-5)', rotulo: 'Semana inteira' },
+  { cor: 'var(--chart-3)', rotulo: 'Boa parte' },
+  { cor: 'var(--chart-1)', rotulo: 'Começou' },
+  { cor: 'var(--chart-grid)', rotulo: 'Ninguém contatado' },
+]
 
 /**
  * Um quadradinho por pessoa, por semana.
@@ -22,7 +47,16 @@ export interface LinhaMapa {
  * diferente de "teve e nao fez", e um mapa que confunde as duas coisas
  * acusaria gente inocente.
  */
-export function MapaConstancia({ linhas, descricao }: { linhas: LinhaMapa[]; descricao: string }) {
+export function MapaConstancia({
+  linhas,
+  descricao,
+  legenda = LEGENDA_CUIDADO,
+}: {
+  linhas: LinhaMapa[]
+  descricao: string
+  /** Trocada quando a celula mede outra coisa - presenca, por exemplo. */
+  legenda?: ItemLegenda[]
+}) {
   const [ref, largura] = useLargura<HTMLDivElement>()
   const [ativo, setAtivo] = React.useState<{ linha: number; celula: number } | null>(null)
   const [x, setX] = React.useState(0)
@@ -30,15 +64,7 @@ export function MapaConstancia({ linhas, descricao }: { linhas: LinhaMapa[]; des
   const colunas = linhas[0]?.celulas.length ?? 0
 
   return (
-    <Figura
-      descricao={descricao}
-      legenda={[
-        { cor: 'var(--chart-5)', rotulo: 'Semana inteira' },
-        { cor: 'var(--chart-3)', rotulo: 'Boa parte' },
-        { cor: 'var(--chart-1)', rotulo: 'Começou' },
-        { cor: 'var(--chart-grid)', rotulo: 'Ninguém contatado' },
-      ]}
-    >
+    <Figura descricao={descricao} legenda={legenda}>
       <div ref={ref} className="relative" onMouseLeave={() => setAtivo(null)}>
         <ul className="space-y-1">
           {linhas.map((linha, indiceLinha) => (
@@ -60,7 +86,7 @@ export function MapaConstancia({ linhas, descricao }: { linhas: LinhaMapa[]; des
                     key={celula.rotulo}
                     className="h-5 w-full min-w-2 rounded-[3px]"
                     style={{
-                      background: corDaCelula(celula),
+                      background: celula.tom ?? corDaCelula(celula),
                       boxShadow:
                         celula.total === 0 ? 'inset 0 0 0 1px var(--chart-grid)' : undefined,
                       opacity: !ativo || ativo.linha === indiceLinha ? 1 : 0.5,
@@ -84,9 +110,11 @@ export function MapaConstancia({ linhas, descricao }: { linhas: LinhaMapa[]; des
             linhas={[
               {
                 rotulo: linhas[ativo.linha]!.celulas[ativo.celula]!.rotulo,
-                valor: `${linhas[ativo.linha]!.celulas[ativo.celula]!.feitos} de ${
-                  linhas[ativo.linha]!.celulas[ativo.celula]!.total
-                }`,
+                valor:
+                  linhas[ativo.linha]!.celulas[ativo.celula]!.detalhe ??
+                  `${linhas[ativo.linha]!.celulas[ativo.celula]!.feitos} de ${
+                    linhas[ativo.linha]!.celulas[ativo.celula]!.total
+                  }`,
               },
             ]}
           />

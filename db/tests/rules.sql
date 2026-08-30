@@ -188,3 +188,101 @@ begin
   raise notice 'regras do banco: 11 verificacoes passaram';
 end;
 $$;
+
+-- =============================================================================
+-- Visitantes e chamada do GC
+--
+-- Duas regras que o produto nao pode perder: um visitante nunca vira linha de
+-- `profiles` por acidente (e por isso nunca entra no rodizio proporcional), e
+-- a chamada de um encontro descreve cada pessoa uma unica vez.
+-- =============================================================================
+do $$
+declare
+  v_group uuid;
+  v_visitante uuid;
+  v_integrante uuid;
+  v_encontro uuid;
+  v_faltas int;
+  falhou boolean;
+begin
+  select id into v_group from public.groups limit 1;
+  select id into v_integrante from public.profiles where full_name = 'Anderson';
+
+  insert into public.visitors (group_id, full_name, origin)
+  values (v_group, 'Marcos Visitante', 'gc_center')
+  returning id into v_visitante;
+
+  -- 12. o visitante nao esta no cadastro do GC -------------------------------
+  -- E o que mantem o rodizio proporcional fora do alcance dele: a distribuicao
+  -- le `profiles`, e ele nao esta la.
+  if exists (select 1 from public.profiles where full_name = 'Marcos Visitante') then
+    raise exception 'FALHA: um visitante virou integrante sem promocao';
+  end if;
+
+  -- 13. encerrar acompanhamento exige motivo ---------------------------------
+  falhou := false;
+  begin
+    update public.visitors set status = 'encerrado' where id = v_visitante;
+  exception when check_violation then falhou := true; end;
+  if not falhou then raise exception 'FALHA: encerrou o acompanhamento sem motivo'; end if;
+
+  update public.visitors
+     set status = 'encerrado', outcome_reason = 'Encaminhado para o GC do bairro dele'
+   where id = v_visitante;
+  update public.visitors
+     set status = 'acompanhando', outcome_reason = null where id = v_visitante;
+
+  -- 14. cada linha da chamada e de uma pessoa so ------------------------------
+  insert into public.gc_meetings (group_id, held_on)
+  values (v_group, current_date - 7) returning id into v_encontro;
+
+  falhou := false;
+  begin
+    insert into public.gc_attendance (meeting_id, profile_id, visitor_id, mark)
+    values (v_encontro, v_integrante, v_visitante, 'presente');
+  exception when check_violation then falhou := true; end;
+  if not falhou then raise exception 'FALHA: aceitou marca de integrante e visitante na mesma linha'; end if;
+
+  falhou := false;
+  begin
+    insert into public.gc_attendance (meeting_id, mark) values (v_encontro, 'presente');
+  exception when check_violation then falhou := true; end;
+  if not falhou then raise exception 'FALHA: aceitou marca sem pessoa nenhuma'; end if;
+
+  -- 15. ninguem aparece duas vezes no mesmo encontro --------------------------
+  insert into public.gc_attendance (meeting_id, profile_id, mark)
+  values (v_encontro, v_integrante, 'ausente');
+
+  falhou := false;
+  begin
+    insert into public.gc_attendance (meeting_id, profile_id, mark)
+    values (v_encontro, v_integrante, 'presente');
+  exception when unique_violation then falhou := true; end;
+  if not falhou then raise exception 'FALHA: a mesma pessoa foi marcada duas vezes no encontro'; end if;
+
+  -- 16. faltas seguidas param em quem avisou -----------------------------------
+  -- Tres encontros: faltou, faltou, justificou. Duas faltas seguidas - a
+  -- terceira nao entra, porque avisar e o contrario de sumir.
+  insert into public.gc_meetings (group_id, held_on) values (v_group, current_date - 14)
+  returning id into v_encontro;
+  insert into public.gc_attendance (meeting_id, profile_id, mark)
+  values (v_encontro, v_integrante, 'ausente');
+
+  insert into public.gc_meetings (group_id, held_on) values (v_group, current_date - 21)
+  returning id into v_encontro;
+  insert into public.gc_attendance (meeting_id, profile_id, mark, justification)
+  values (v_encontro, v_integrante, 'justificado', 'Viagem a trabalho');
+
+  insert into public.gc_meetings (group_id, held_on) values (v_group, current_date - 28)
+  returning id into v_encontro;
+  insert into public.gc_attendance (meeting_id, profile_id, mark)
+  values (v_encontro, v_integrante, 'ausente');
+
+  v_faltas := app.faltas_seguidas(v_integrante);
+  if v_faltas <> 2 then
+    raise exception 'FALHA: esperava 2 faltas seguidas, encontrei %', v_faltas;
+  end if;
+
+  raise notice 'visitantes e chamada: 5 verificacoes passaram';
+end;
+$$;

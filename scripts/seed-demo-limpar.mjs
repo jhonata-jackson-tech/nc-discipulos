@@ -42,6 +42,11 @@ for (const semana of semanas ?? []) {
 }
 await admin.from('care_weeks').delete().eq('group_id', grupo.id)
 
+console.log('→ apagando visitantes e as chamadas do GC')
+// As conversas com o visitante e as marcas da chamada saem por cascata.
+await admin.from('visitors').delete().eq('group_id', grupo.id)
+await admin.from('gc_meetings').delete().eq('group_id', grupo.id)
+
 console.log('→ apagando atividades, supervisão e avisos')
 const { data: atividades } = await admin.from('activities').select('id').eq('group_id', grupo.id)
 for (const atividade of atividades ?? []) {

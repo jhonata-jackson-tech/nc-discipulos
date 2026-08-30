@@ -27,6 +27,30 @@ export type WellBeing =
   'sem_resposta' | 'precisa_ajuda' | 'pra_baixo' | 'seguindo' | 'bem' | 'muito_bem'
 
 export type GcIntent = 'vem' | 'nao_vem' | 'nao_sabe'
+
+/**
+ * Por onde o visitante chegou.
+ *
+ * Os dois primeiros são os caminhos que existem hoje: ou a pessoa aparece na
+ * sala, ou o GC Center manda o contato para a liderança.
+ */
+export type VisitorOrigin = 'organico' | 'gc_center' | 'convite' | 'outro'
+
+/**
+ * Onde o acompanhamento do visitante parou.
+ *
+ * `acompanhando` é o único estado aberto — os outros dois são desfechos, e
+ * todo visitante acaba em um deles.
+ */
+export type VisitorStatus = 'acompanhando' | 'integrado' | 'encerrado'
+
+/**
+ * Como a pessoa esteve no encontro do GC.
+ *
+ * `justificado` separa quem avisou de quem sumiu: três faltas de quem está
+ * viajando não são três faltas de quem está se afastando.
+ */
+export type AttendanceMark = 'presente' | 'justificado' | 'ausente'
 export type ContactChannel = 'whatsapp' | 'call' | 'in_person' | 'message' | 'video' | 'other'
 export type TransferStatus = 'pending' | 'accepted' | 'declined' | 'cancelled'
 
@@ -89,6 +113,8 @@ export interface Group {
   description: string | null
   timezone: string
   week_starts_on: number
+  /** Dia do encontro do GC (0 = domingo; 4 = quinta). */
+  meeting_weekday: number
   setup_completed_at: string | null
 }
 

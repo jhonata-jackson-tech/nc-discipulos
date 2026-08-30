@@ -21,6 +21,7 @@ import { porcento } from '@/components/charts/medidas'
 import { ColunasEmpilhadas, LinhaTendencia } from '@/components/charts/time-charts'
 import { BarrasDivergentes, ListaBarras, Rosca } from '@/components/charts/part-charts'
 import { MapaConstancia } from '@/components/charts/heatmap'
+import { PresencaSection } from './presenca-section'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -166,6 +167,13 @@ export function ReportsPage() {
       )}
 
       {dados && dados.semanas.length > 0 && <Conteudo dados={dados} />}
+
+      {/* A presença vive fora do bloco acima de propósito: a chamada do GC não
+          depende de nenhuma semana de cuidado publicada, e um GC que ainda não
+          distribuiu cuidado nenhum já tem gente aparecendo na sala. O recorte
+          vira encontros — uma semana sem GC não é uma semana com zero
+          presentes. */}
+      <PresencaSection encontros={semanas} />
     </div>
   )
 }

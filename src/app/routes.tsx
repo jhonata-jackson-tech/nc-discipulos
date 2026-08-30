@@ -36,6 +36,12 @@ const ActivitiesPage = lazy(() =>
 const MembersPage = lazy(() =>
   import('@/features/members/members-page').then((m) => ({ default: m.MembersPage })),
 )
+const VisitorsPage = lazy(() =>
+  import('@/features/visitors/visitors-page').then((m) => ({ default: m.VisitorsPage })),
+)
+const AttendancePage = lazy(() =>
+  import('@/features/attendance/attendance-page').then((m) => ({ default: m.AttendancePage })),
+)
 const SupervisionPage = lazy(() =>
   import('@/features/supervision/supervision-page').then((m) => ({ default: m.SupervisionPage })),
 )
@@ -128,6 +134,11 @@ export const router = createBrowserRouter([
                     element: <RequireRole roles={['leader', 'supervisor']} />,
                     children: [
                       { path: '/integrantes', element: <MembersPage /> },
+                      // Visitante e chamada são leitura da liderança inteira;
+                      // escrever, só líder — a RLS e as funções decidem isso,
+                      // e a tela apenas esconde os botões.
+                      { path: '/visitantes', element: <VisitorsPage /> },
+                      { path: '/presenca', element: <AttendancePage /> },
                       { path: '/relatorios', element: <ReportsPage /> },
                       { path: '/agenda', element: <WeeksPage /> },
                     ],

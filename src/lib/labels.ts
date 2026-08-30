@@ -6,6 +6,9 @@
  */
 import type {
   ActivityResponse,
+  AttendanceMark,
+  VisitorOrigin,
+  VisitorStatus,
   DevotionalAudience,
   ActivityType,
   AppRole,
@@ -112,6 +115,38 @@ export const gcIntentLabel: Record<GcIntent, string> = {
   vem: 'Vem ao GC',
   nao_vem: 'Não vem',
   nao_sabe: 'Ainda não sabe',
+}
+
+/**
+ * Por onde o visitante chegou.
+ *
+ * "Veio sozinho" e não "orgânico": a palavra do banco descreve o dado, a da
+ * tela descreve a pessoa.
+ */
+export const visitorOriginLabel: Record<VisitorOrigin, string> = {
+  organico: 'Veio sozinho',
+  gc_center: 'GC Center',
+  convite: 'Convidado por alguém',
+  outro: 'Outro caminho',
+}
+
+export const visitorStatusLabel: Record<VisitorStatus, string> = {
+  acompanhando: 'Acompanhando',
+  integrado: 'Entrou no GC',
+  encerrado: 'Acompanhamento encerrado',
+}
+
+export const attendanceLabel: Record<AttendanceMark, string> = {
+  presente: 'Veio',
+  justificado: 'Avisou',
+  ausente: 'Faltou',
+}
+
+/** Uma palavra a mais, para a chamada não virar chute. */
+export const attendanceHint: Record<AttendanceMark, string> = {
+  presente: 'Esteve no GC',
+  justificado: 'Não veio, mas avisou',
+  ausente: 'Não veio e não avisou',
 }
 
 export const activityResponseLabel: Record<ActivityResponse, string> = {

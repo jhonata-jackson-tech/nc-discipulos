@@ -195,6 +195,12 @@ for (const semana of semanas) {
 // --------------------------------------------------- 4. contatos registrados
 console.log('→ registrando contatos, feedbacks e pontos de atenção')
 const CANAIS = ['whatsapp', 'call', 'in_person', 'message', 'video']
+const MOTIVOS_DE_FALTA = [
+  'Viagem a trabalho',
+  'Plantão no hospital',
+  'Gripado',
+  'Prova na faculdade',
+]
 const FEEDBACKS = [
   'Conversa boa, combinamos de nos ver no culto de domingo.',
   'Mandei mensagem e respondeu rápido. Está animado com o GC.',
@@ -418,7 +424,163 @@ await admin.from('supervision_requests').insert([
   },
 ])
 
-// -------------------------------------------------------- 8. notificações
+// ------------------------------------------------------------ 8. visitantes
+// Os dois caminhos que existem hoje - quem apareceu na sala e quem o GC Center
+// mandou - mais um desfecho de cada tipo, para a tela ter o que mostrar em
+// todas as abas.
+console.log('→ cadastrando visitantes e as conversas com eles')
+await admin.from('visitors').delete().eq('group_id', grupo.id)
+
+const visitantes = [
+  {
+    full_name: 'Marcos Andrade',
+    phone: '(11) 98812-4477',
+    care_gender: 'male',
+    origin: 'gc_center',
+    first_visit_on: iso(somarDias(new Date(), -12)),
+    notes: 'Chegou pelo GC Center. Mora a duas quadras do local do GC.',
+    status: 'acompanhando',
+    conversas: [
+      { dias: -10, canal: 'whatsapp', intencao: 'vem', nota: 'Respondeu animado, disse que vem na quinta.' },
+      { dias: -4, canal: 'call', intencao: 'vem', nota: 'Veio na semana passada e gostou. Perguntou do horário.' },
+    ],
+  },
+  {
+    full_name: 'Beatriz Camargo',
+    phone: '(11) 99143-2081',
+    care_gender: 'female',
+    origin: 'convite',
+    convidadaPor: 'Camila',
+    first_visit_on: iso(somarDias(new Date(), -6)),
+    notes: 'Veio com a Camila, colega de trabalho dela.',
+    status: 'acompanhando',
+    conversas: [
+      { dias: -3, canal: 'message', intencao: 'nao_sabe', nota: 'Está em uma escala de plantão, vai tentar.' },
+    ],
+  },
+  {
+    full_name: 'Thiago Nunes',
+    phone: null,
+    care_gender: 'male',
+    origin: 'organico',
+    first_visit_on: iso(somarDias(new Date(), -3)),
+    notes: 'Apareceu sozinho, veio a convite de um vizinho.',
+    status: 'acompanhando',
+    conversas: [],
+  },
+  {
+    full_name: 'Renata Prado',
+    phone: '(11) 97733-0092',
+    care_gender: 'female',
+    origin: 'gc_center',
+    first_visit_on: iso(somarDias(new Date(), -31)),
+    notes: 'Mora longe daqui; o GC do bairro dela atende melhor.',
+    status: 'encerrado',
+    motivo: 'Encaminhada para o GC do bairro dela, que fica a dez minutos da casa.',
+    conversas: [
+      { dias: -28, canal: 'whatsapp', intencao: 'nao_sabe', nota: 'Perguntou se tem GC mais perto.' },
+    ],
+  },
+]
+
+for (const visitante of visitantes) {
+  const { data: linha, error: falha } = await admin
+    .from('visitors')
+    .insert({
+      group_id: grupo.id,
+      full_name: visitante.full_name,
+      phone: visitante.phone,
+      care_gender: visitante.care_gender,
+      origin: visitante.origin,
+      invited_by: visitante.convidadaPor ? porNome.get(visitante.convidadaPor).id : null,
+      first_visit_on: visitante.first_visit_on,
+      notes: visitante.notes,
+      status: visitante.status,
+      outcome_reason: visitante.motivo ?? null,
+      closed_at: visitante.status === 'encerrado' ? new Date().toISOString() : null,
+      closed_by: visitante.status === 'encerrado' ? lider.id : null,
+      created_by: lider.id,
+    })
+    .select('id')
+    .single()
+  if (falha) throw falha
+
+  for (const conversa of visitante.conversas) {
+    await admin.from('visitor_contacts').insert({
+      visitor_id: linha.id,
+      author_id: lider.id,
+      contacted_on: iso(somarDias(new Date(), conversa.dias)),
+      channel: conversa.canal,
+      coming_to_gc: conversa.intencao,
+      notes: conversa.nota,
+    })
+  }
+  visitante.id = linha.id
+}
+
+// ------------------------------------------------------- 9. chamada do GC
+// Uma chamada por quinta, nas quatro semanas anteriores - e a de duas semanas
+// atrás em uma sexta, para o histórico mostrar o GC que precisou mudar de dia.
+console.log('→ registrando a presença dos últimos encontros')
+await admin.from('gc_meetings').delete().eq('group_id', grupo.id)
+
+const { data: elenco } = await admin
+  .from('profiles')
+  .select('id')
+  .in('id', idsDoGrupo)
+  .eq('status', 'active')
+  .is('deleted_at', null)
+
+const QUINTA = 4
+for (let atras = 4; atras >= 1; atras -= 1) {
+  // A quinta daquela semana; na de duas semanas atrás, a sexta.
+  const segunda = segundaDaSemana(-atras)
+  const dia = somarDias(segunda, atras === 2 ? QUINTA : QUINTA - 1)
+  if (iso(dia) > iso(new Date())) continue
+
+  const { data: encontro, error: falhaEncontro } = await admin
+    .from('gc_meetings')
+    .insert({
+      group_id: grupo.id,
+      week_id: criadas.find((s) => s.inicio === iso(segunda))?.id ?? null,
+      held_on: iso(dia),
+      notes: atras === 2 ? 'Adiado para sexta: o salão estava ocupado.' : null,
+      registered_by: lider.id,
+      registered_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+  if (falhaEncontro) throw falhaEncontro
+
+  await admin.from('gc_attendance').insert(
+    elenco.map((pessoa) => {
+      const sorteio = aleatorio()
+      const marca = sorteio > 0.32 ? 'presente' : sorteio > 0.18 ? 'justificado' : 'ausente'
+      return {
+        meeting_id: encontro.id,
+        profile_id: pessoa.id,
+        mark: marca,
+        justification: marca === 'justificado' ? escolher(MOTIVOS_DE_FALTA) : null,
+      }
+    }),
+  )
+
+  // Os visitantes que já tinham visitado até aquele dia aparecem na sala.
+  const naSala = visitantes.filter(
+    (v) => v.first_visit_on <= iso(dia) && v.status === 'acompanhando',
+  )
+  if (naSala.length > 0) {
+    await admin.from('gc_attendance').insert(
+      naSala.map((visitante) => ({
+        meeting_id: encontro.id,
+        visitor_id: visitante.id,
+        mark: aleatorio() > 0.35 ? 'presente' : 'ausente',
+      })),
+    )
+  }
+}
+
+// -------------------------------------------------------- 10. notificações
 console.log('→ enviando avisos')
 await admin.from('notifications').insert(
   cuidadores.slice(0, 6).map((pessoa) => ({
@@ -430,7 +592,7 @@ await admin.from('notifications').insert(
   })),
 )
 
-// ------------------------------------------------------------- 9. acessos
+// ------------------------------------------------------------ 11. acessos
 console.log('→ criando os acessos de demonstração')
 const contas = [
   { nome: 'Jhonata Jackson', papel: 'Líder', email: 'jhonata@cuidar.local' },

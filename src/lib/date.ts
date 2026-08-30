@@ -40,6 +40,25 @@ export function endOfWeek(iso: string = todayISO()): string {
   return addDays(startOfWeek(iso), 6)
 }
 
+/**
+ * O ultimo dia de encontro que ja aconteceu - hoje, se hoje for ele.
+ *
+ * O GC e na quinta. Na sexta de manha, a chamada que a lideranca quer abrir e
+ * a de ontem; na quarta, a da quinta passada. Uma data que sempre nasce certa
+ * evita o erro mais caro dessa tela: registrar a presenca no dia errado.
+ */
+export function lastWeekdayOn(weekday: number, from: string = todayISO()): string {
+  const diff = (parseISODate(from).getUTCDay() - weekday + 7) % 7
+  return addDays(from, -diff)
+}
+
+/** "quinta-feira" - o dia da semana por extenso, no fuso do GC. */
+export function weekdayName(iso: string): string {
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: TIME_ZONE, weekday: 'long' }).format(
+    parseISODate(iso),
+  )
+}
+
 export function formatDate(iso: string | null | undefined, style: 'short' | 'long' = 'short') {
   if (!iso) return '--'
   const date = iso.length === 10 ? parseISODate(iso) : new Date(iso)

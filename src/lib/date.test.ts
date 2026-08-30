@@ -5,9 +5,11 @@ import {
   endOfWeek,
   formatDate,
   formatWeekRange,
+  lastWeekdayOn,
   relativeDeadline,
   startOfWeek,
   todayISO,
+  weekdayName,
 } from './date'
 
 describe('semana de cuidado', () => {
@@ -28,6 +30,33 @@ describe('semana de cuidado', () => {
   it('anda entre semanas sem escorregar no fuso', () => {
     expect(addDays('2026-08-31', 1)).toBe('2026-09-01')
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31')
+  })
+})
+
+describe('o dia do encontro do GC', () => {
+  // 2026-08-27 e uma quinta-feira; 4 = quinta.
+  it('devolve o proprio dia quando hoje e o dia do GC', () => {
+    expect(lastWeekdayOn(4, '2026-08-27')).toBe('2026-08-27')
+  })
+
+  it('na sexta, ainda aponta para a quinta que acabou de passar', () => {
+    // E o caso que mais importa: quem abre a chamada na manha seguinte quer a
+    // de ontem, nao a da semana que vem.
+    expect(lastWeekdayOn(4, '2026-08-28')).toBe('2026-08-27')
+  })
+
+  it('na quarta, aponta para a quinta anterior', () => {
+    expect(lastWeekdayOn(4, '2026-09-02')).toBe('2026-08-27')
+  })
+
+  it('acompanha um GC que mude de dia', () => {
+    // Se o grupo passar a se reunir na terca (2), a conta continua valendo.
+    expect(lastWeekdayOn(2, '2026-08-27')).toBe('2026-08-25')
+  })
+
+  it('escreve o dia da semana por extenso', () => {
+    expect(weekdayName('2026-08-27')).toBe('quinta-feira')
+    expect(weekdayName('2026-08-28')).toBe('sexta-feira')
   })
 })
 

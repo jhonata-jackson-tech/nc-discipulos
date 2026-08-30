@@ -1,7 +1,9 @@
 import {
   BarChart3,
   BookOpen,
+  CalendarCheck,
   CalendarRange,
+  DoorOpen,
   HeartHandshake,
   House,
   ListChecks,
@@ -77,6 +79,20 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Users,
     roles: ['leader', 'supervisor'],
     description: 'Cadastro, convites e discipulado',
+  },
+  {
+    to: '/presenca',
+    label: 'Presença',
+    icon: CalendarCheck,
+    roles: ['leader', 'supervisor'],
+    description: 'A chamada do fim do GC',
+  },
+  {
+    to: '/visitantes',
+    label: 'Visitantes',
+    icon: DoorOpen,
+    roles: ['leader', 'supervisor'],
+    description: 'Quem visitou e ainda não faz parte do GC',
   },
   {
     to: '/relatorios',

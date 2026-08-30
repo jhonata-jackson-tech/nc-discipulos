@@ -32,24 +32,26 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 
 ## O que já está implementado
 
-| Área                                                               | Situação |
-| ------------------------------------------------------------------ | -------- |
-| Autenticação por convite, login e primeiro acesso                  | ✅       |
-| Troca de senha pelo próprio integrante                             | ✅       |
-| Papéis, integrantes, discipulado e restrições de rodízio           | ✅       |
-| Geração da semana no servidor, revisão, reorganização e publicação | ✅       |
-| Minha semana, registro de contato, feedback e níveis de atenção    | ✅       |
-| Transferência com aceite e reorganização auditada do líder         | ✅       |
-| Atividades com múltiplos responsáveis e recorrência                | ✅       |
-| Supervisão reservada e anotações privadas                          | ✅       |
-| Devocionais com push, leitura e “Amém”                             | ✅       |
-| Relatórios com séries semana a semana e mapa de constância         | ✅       |
-| Perfil (só ver) separado de Configurações (alterar)                | ✅       |
-| Notificações internas                                              | ✅       |
-| PWA instalável com cache do shell                                  | ✅       |
-| Notificações push (fora do app)                                    | ✅       |
-| Tema claro, escuro e "seguir o sistema"                            | ✅       |
-| Testes unitários, de regras no banco, de RLS e end-to-end          | ✅       |
+| Área                                                                  | Situação |
+| --------------------------------------------------------------------- | -------- |
+| Autenticação por convite, login e primeiro acesso                     | ✅       |
+| Troca de senha pelo próprio integrante                                | ✅       |
+| Papéis, integrantes, discipulado e restrições de rodízio              | ✅       |
+| Geração da semana no servidor, revisão, reorganização e publicação    | ✅       |
+| Minha semana, registro de contato, feedback e níveis de atenção       | ✅       |
+| Transferência com aceite e reorganização auditada do líder            | ✅       |
+| Atividades com múltiplos responsáveis e recorrência                   | ✅       |
+| Supervisão reservada e anotações privadas                             | ✅       |
+| Devocionais com push, leitura e “Amém”                                | ✅       |
+| Visitantes: cadastro, contatos da liderança, entrada no GC e desfecho | ✅       |
+| Chamada do GC no fim do encontro, com faltas seguidas no relatório    | ✅       |
+| Relatórios com séries semana a semana e mapa de constância            | ✅       |
+| Perfil (só ver) separado de Configurações (alterar)                   | ✅       |
+| Notificações internas                                                 | ✅       |
+| PWA instalável com cache do shell                                     | ✅       |
+| Notificações push (fora do app)                                       | ✅       |
+| Tema claro, escuro e "seguir o sistema"                               | ✅       |
+| Testes unitários, de regras no banco, de RLS e end-to-end             | ✅       |
 
 Não há recuperação de senha automática — é uma decisão, e está explicada em
 [Senhas](#senhas).
@@ -85,7 +87,10 @@ npm run dev
 O `npm run demo` popula o GC com três semanas de cuidado (encerrada, publicada
 e em rascunho), contatos registrados com feedbacks e pontos de atenção, cinco
 atividades, um pedido de transferência pendente, três conversas com a supervisão,
-avisos e aniversários. Ele imprime as contas criadas — uma por papel — e grava
+avisos e aniversários. Também cadastra quatro visitantes — pelo GC Center, por
+convite e por conta própria, com um deles já encerrado — e a chamada dos quatro
+encontros anteriores, incluindo um GC que precisou acontecer na sexta. Ele
+imprime as contas criadas — uma por papel — e grava
 `VITE_DEMO_ACCOUNTS` no `.env.local`, o que liga o botão **Trocar de perfil** no
 rodapé da barra lateral. Reinicie o `npm run dev` depois do seed para o Vite
 reler o `.env.local`.
@@ -417,12 +422,12 @@ para com um erro de configuração claro em vez de produzir algo inválido.
 
 ## Papéis e permissões
 
-| Papel        | Na interface | O que faz                                                                                                                           |
-| ------------ | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `supervisor` | Supervisor   | Acompanha indicadores e cuidados; recebe conversas reservadas; não mexe na operação semanal                                         |
-| `leader`     | Líder        | Gerencia integrantes, vínculos e atividades; gera, revisa e publica a semana; **cuida e registra contatos como qualquer discípulo** |
-| `disciple`   | Discípulo    | Cuida das pessoas atribuídas, registra contatos, transfere com aceite, pede conversa com a supervisão                               |
-| `member`     | Irmão/Irmã   | Vê os próprios dados, avisos e atividades. Nunca vê feedback de cuidado                                                             |
+| Papel        | Na interface | O que faz                                                                                                                                                                 |
+| ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `supervisor` | Supervisor   | Acompanha indicadores, cuidados, visitantes e presença; recebe conversas reservadas; não mexe na operação semanal                                                         |
+| `leader`     | Líder        | Gerencia integrantes, vínculos e atividades; gera, revisa e publica a semana; acompanha visitantes e faz a chamada; **cuida e registra contatos como qualquer discípulo** |
+| `disciple`   | Discípulo    | Cuida das pessoas atribuídas, registra contatos, transfere com aceite, pede conversa com a supervisão                                                                     |
+| `member`     | Irmão/Irmã   | Vê os próprios dados, avisos e atividades. Nunca vê feedback de cuidado                                                                                                   |
 
 Acima dos papéis existe uma **marca**, não um quinto papel: `profiles.is_admin`.
 Ela libera publicar devocional — um aviso que chega em dezenas de celulares — e
@@ -474,7 +479,10 @@ cuidador é desativado.
 
 **Regras no banco** (`db/tests/rules.sql`, via `npm run verify:db`) exercitam as
 constraints e os gatilhos em um Postgres limpo, em segundos, sem subir a
-aplicação. A mesma rotina confere que `auth.uid()` continua lendo a sessão —
+aplicação. Entre elas: que um visitante nunca vira linha de `profiles` por
+acidente — é o que o mantém fora do rodízio proporcional —, que encerrar um
+acompanhamento exige motivo, que cada pessoa aparece uma única vez na chamada
+de um encontro e que quem avisou interrompe a contagem de faltas seguidas. A mesma rotina confere que `auth.uid()` continua lendo a sessão —
 inclusive quando o GUC volta vazio em uma conexão reaproveitada do pool.
 
 **Integração/RLS** (`tests/integration/rls.test.ts`) roda contra o banco real e
@@ -486,7 +494,9 @@ solicitação reservada não vaza para o líder.
 **End-to-end** (`tests/e2e/`) cobre login, Minha
 semana, discípulo marcando contato, líder marcando contato com o discípulo fixo
 e com o irmão do rodízio, transferência com aceite, criação de atividade,
-publicação da semana e pedido reservado de supervisão. Roda em desktop e em
+publicação da semana, pedido reservado de supervisão, o visitante do cadastro
+até a entrada no GC (e o encerramento que exige motivo) e a chamada do encontro
+até o número aparecer no relatório. Roda em desktop e em
 viewport de celular, numa porta própria (5179) para não esbarrar em outro
 projeto ocupando a porta padrão do Vite.
 
@@ -734,8 +744,8 @@ src/
   app/            rotas, navegação por papel e cliente de dados
   domain/         algoritmo de distribuição e fluxo de custo mínimo (puros)
   features/       uma pasta por assunto: auth, week, care, distribution,
-                  activities, devotionals, members, supervision, notifications,
-                  settings, setup
+                  activities, devotionals, members, visitors, attendance,
+                  supervision, reports, notifications, settings, setup
   components/
     ui/           primitivos (botão, campo, diálogo, tabela…)
     common/       peças compartilhadas (estados, badges, pessoa, indicadores)
@@ -850,6 +860,38 @@ a liderança indicava alguém para o lanche e continuava sem saber se a pessoa
 viu, se pode, se topou. O único estado que existe hoje é a resposta de quem foi
 indicado. E quem cria a atividade **se indicando** já entra aceito, sem aviso:
 já quis, já sabe — pedir confirmação seria perguntar duas vezes a mesma coisa.
+
+**O visitante não é um integrante — e é por isso que ele não está em `profiles`.**
+Ele nasce em `visitors`, uma tabela própria. Não é organização: a distribuição
+semanal lê `profiles`, e um visitante ali seria distribuído no rodízio
+proporcional na semana seguinte — alguém receberia “cuide de Marcos” sobre uma
+pessoa que apareceu uma vez e talvez não volte. Fora da tabela, ele está fora
+da conta por construção, e não por um `where` que alguém pode esquecer. Quem
+acompanha é a liderança, e todo acompanhamento acaba de um jeito: ou a pessoa
+entra no GC — e o histórico de visitante fica ligado ao cadastro novo — ou é
+encerrado **com o motivo escrito**, porque daqui a três meses ninguém lembra
+por que se parou de procurar o Marcos.
+
+**Quem disse que vem e quem apareceu são perguntas diferentes.** O registro de
+contato já perguntava a primeira; a chamada do fim do GC responde a segunda, e
+a distância entre as duas é uma informação pastoral por si só. A chamada é do
+**encontro**, não da semana: ele tem data — a quinta, ou a sexta em que coube —
+e a semana de cuidado entra só como vínculo, para o relatório colocar as duas
+séries lado a lado. Um GC que aconteceu duas vezes na mesma semana, ou nenhuma,
+continua sendo descrito com honestidade; uma semana sem GC não é uma semana com
+zero presentes, e por isso a média se conta por encontro.
+
+**Faltar não é um estado único.** “Não veio” e “avisou que não viria” pedem
+coisas diferentes da liderança. Somadas, três faltas de quem está viajando
+ficam iguais a três faltas de quem está se afastando — que são o contrário uma
+da outra. Por isso `justificado` interrompe a contagem de faltas seguidas, e a
+lista de “faltando seguido” não é uma lista de devedores: é a lista de quem
+alguém precisa procurar esta semana.
+
+**Presença não é boletim.** A chamada em si é do GC — saber que teve GC dia 27
+não expõe ninguém — mas “quem faltou” na mão de 33 pessoas vira assunto de
+corredor. A RLS mostra a cada pessoa apenas a própria linha; a leitura do
+conjunto é da liderança e da supervisão.
 
 **Os gráficos não têm biblioteca.** São SVG e `div` em `src/components/charts/`.
 O app é instalado no celular de 33 pessoas; uma biblioteca de gráficos custaria

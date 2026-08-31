@@ -91,6 +91,8 @@ services:
     build:
       context: .
       dockerfile: web.Dockerfile
+      args:
+        COMMIT_SHA: ${COMMIT_SHA:-}
     restart: unless-stopped
     depends_on: [api, postgrest]
     environment:

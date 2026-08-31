@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -17,7 +18,31 @@ const proxy = {
   '/api': 'http://localhost:3001',
 }
 
+/**
+ * A identidade desta build, gravada dentro do pacote.
+ *
+ * Serve para uma pergunta que aparece toda semana: "o que estou vendo no
+ * celular e a versao nova ou o cache antigo?". Sem um numero na tela, a unica
+ * resposta possivel e o chute.
+ *
+ * O commit vem do `git` quando ele existe (desenvolvimento) e da variavel de
+ * ambiente quando nao existe - dentro do Docker o `.git` fica de fora do
+ * contexto de propósito, para nao mandar o historico inteiro ao daemon.
+ */
+function identidadeDaBuild() {
+  const doAmbiente = process.env.COMMIT_SHA?.trim()
+  if (doAmbiente) return { commit: doAmbiente.slice(0, 7), buildTime: new Date().toISOString() }
+
+  try {
+    const doGit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+    return { commit: doGit.toString().trim(), buildTime: new Date().toISOString() }
+  } catch {
+    return { commit: '', buildTime: new Date().toISOString() }
+  }
+}
+
 export default defineConfig({
+  define: { __VERSAO__: JSON.stringify(identidadeDaBuild()) },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -48,7 +73,12 @@ export default defineConfig({
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: '/icons/icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       injectManifest: {

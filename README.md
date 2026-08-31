@@ -642,10 +642,19 @@ atende outros sites. Três restrições da máquina, três modos de sobreposiç�
 | Kernel 3.10 recusa o Postgres em container          | `docker-compose.banco-do-host.yml` — PostgreSQL 16 nativo |
 
 ```bash
+export COMMIT_SHA="$(git rev-parse --short HEAD)"   # aparece na tela de versão
+docker compose -f docker-compose.yml \
+               -f docker-compose.host.yml \
+               -f docker-compose.banco-do-host.yml build web api
 docker compose -f docker-compose.yml \
                -f docker-compose.host.yml \
                -f docker-compose.banco-do-host.yml up -d postgrest api web
 ```
+
+> O `COMMIT_SHA` não é enfeite: o `.git` fica fora do contexto do Docker de
+> propósito, então é por ele que a tela de versão sabe o que está rodando. Sem
+> ele a tela mostra só a data da build — o que ainda responde à pergunta, mas
+> com menos precisão.
 
 As migrations, nesse caso, rodam pelo psql da máquina — e não é o `psql` do
 `PATH`. A máquina tem dois PostgreSQL: o do cPanel na 5432 (binários em
@@ -725,6 +734,15 @@ Depois do primeiro deploy, emita o convite de bootstrap (veja
 ```bash
 git pull && npm run deploy
 ```
+
+### Qual versão está no ar
+
+Em **Configurações**, no pé da tela, e no rodapé da folha **Mais** — dois
+toques do celular. Mostra a data da build e o commit, que é o que se compara
+com o que foi publicado. Do lado, **Buscar atualização** apaga o cache,
+descarta o service worker e recarrega: é a resposta para "isso aí é a versão
+nova ou o cache de ontem?" sem pedir a ninguém que mexa nas configurações do
+navegador.
 
 ### O que fica exposto
 

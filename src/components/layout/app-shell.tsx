@@ -6,6 +6,7 @@ import { useUnreadCount } from '@/features/notifications/use-notifications'
 import { navFor } from '@/app/navigation'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { Marca } from '@/components/common/marca'
+import { Versao } from '@/components/common/versao'
 import { DemoRoleSwitcher } from '@/components/layout/demo-role-switcher'
 import { cn, initials } from '@/lib/utils'
 import { roleLabelFor } from '@/lib/labels'
@@ -198,6 +199,10 @@ export function AppShell() {
                     </span>
                   </NavLink>
                 ))}
+
+                {/* O caminho mais curto do celular ate a versao: um toque em
+                    "Mais". E de la que se descobre que a tela e o cache. */}
+                <Versao discreta className="mt-2 border-t pt-3" />
               </DialogBody>
             </DialogContent>
           </Dialog>

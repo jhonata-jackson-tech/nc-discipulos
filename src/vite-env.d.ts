@@ -10,3 +10,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** Identidade da build, injetada pelo Vite. Veja `identidadeDaBuild` no `vite.config.ts`. */
+declare const __VERSAO__: {
+  /** Commit curto. Vazio quando a build saiu sem git e sem `COMMIT_SHA`. */
+  commit: string
+  /** ISO do momento em que o pacote foi gerado. */
+  buildTime: string
+}

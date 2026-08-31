@@ -8,6 +8,12 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
+
+# O `.git` fica fora do contexto (veja `.dockerignore`), entao o commit chega
+# por aqui - e a tela de versao consegue dizer o que esta rodando.
+ARG COMMIT_SHA=""
+ENV COMMIT_SHA=$COMMIT_SHA
+
 RUN npm run build
 
 # ------------------------------------------------------------------ runtime

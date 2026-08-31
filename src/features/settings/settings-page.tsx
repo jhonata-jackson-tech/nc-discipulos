@@ -15,6 +15,7 @@ import { formatDateTime } from '@/lib/date'
 import { PushCard } from '@/features/notifications/push-card'
 import { MeusDados } from './meus-dados'
 import { PageHeader } from '@/components/common/page-header'
+import { Versao } from '@/components/common/versao'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -107,6 +108,15 @@ export function SettingsPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* No pé da tela, onde não atrapalha - mas sempre no mesmo lugar, que é
+          o que importa quando alguém precisa conferir se está vendo a versão
+          nova ou o cache de ontem. */}
+      <Card>
+        <CardContent className="p-4">
+          <Versao />
+        </CardContent>
+      </Card>
     </div>
   )
 }

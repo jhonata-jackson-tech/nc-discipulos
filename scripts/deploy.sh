@@ -16,7 +16,11 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-echo "→ construindo as imagens"
+# A tela de versao mostra este commit: e como se confere, do celular, se o que
+# esta na tela e a build nova ou o cache antigo.
+export COMMIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
+
+echo "→ construindo as imagens ($COMMIT_SHA)"
 docker compose build
 
 echo "→ subindo (o banco fica de pe; so os servicos reiniciam)"

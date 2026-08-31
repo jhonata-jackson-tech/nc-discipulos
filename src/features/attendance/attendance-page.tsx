@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -99,12 +100,11 @@ export function AttendancePage() {
             <Label htmlFor="dia-do-encontro" className="text-muted-foreground shrink-0 text-xs">
               Outro dia de encontro
             </Label>
-            <Input
+            <DateInput
               id="dia-do-encontro"
-              type="date"
               max={todayISO()}
               value={quando}
-              className="h-10 w-auto min-w-40 text-sm"
+              className="w-auto min-w-40"
               onChange={(evento) => setQuando(evento.target.value)}
             />
           </div>

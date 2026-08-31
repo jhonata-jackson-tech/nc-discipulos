@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useDisciples } from '@/features/members/use-members'
@@ -8,6 +8,7 @@ import type { ActivityType } from '@/types/database'
 import { useSaveActivity, type ActivityWithAssignees } from './use-activities'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -107,6 +108,8 @@ export function ActivityDialog({
     })
   }, [open, activity, form])
 
+  const quando = useWatch({ control: form.control, name: 'dueAt' })
+
   const onSubmit = form.handleSubmit(async (values) => {
     await save.mutateAsync({
       id: activity?.id ?? null,
@@ -158,7 +161,12 @@ export function ActivityDialog({
             </Field>
 
             <Field label="Prazo" htmlFor="dueAt" hint="Opcional. Horário no fuso de São Paulo.">
-              <Input id="dueAt" type="datetime-local" {...form.register('dueAt')} />
+              <DateInput
+                id="dueAt"
+                type="datetime-local"
+                value={quando}
+                {...form.register('dueAt')}
+              />
             </Field>
           </div>
 

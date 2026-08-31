@@ -16,7 +16,7 @@ import type { ContactChannel, GcIntent, WellBeing } from '@/types/database'
 import { useLogContact, type AssignmentWithPeople } from './use-care'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -28,7 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const CHANNELS: ContactChannel[] = ['whatsapp', 'call', 'in_person', 'message', 'video', 'other']
 
@@ -45,9 +51,12 @@ const ESCALA: WellBeing[] = [
 const PRESENCA: GcIntent[] = ['vem', 'nao_vem', 'nao_sabe']
 
 const schema = z.object({
-  wellBeing: z.enum(['sem_resposta', 'precisa_ajuda', 'pra_baixo', 'seguindo', 'bem', 'muito_bem'], {
-    message: 'Diga como a pessoa está.',
-  }),
+  wellBeing: z.enum(
+    ['sem_resposta', 'precisa_ajuda', 'pra_baixo', 'seguindo', 'bem', 'muito_bem'],
+    {
+      message: 'Diga como a pessoa está.',
+    },
+  ),
   comingToGc: z.enum(['vem', 'nao_vem', 'nao_sabe']).optional(),
   channel: z.enum(['whatsapp', 'call', 'in_person', 'message', 'video', 'other']),
   contactedOn: z.string().min(1, 'Informe a data do contato.'),
@@ -105,6 +114,7 @@ function ContactBody({
   })
 
   const wellBeing = useWatch({ control: form.control, name: 'wellBeing' })
+  const contactedOn = useWatch({ control: form.control, name: 'contactedOn' })
 
   const onSubmit = form.handleSubmit(async (values) => {
     await log.mutateAsync({
@@ -253,7 +263,11 @@ function ContactBody({
                 </Field>
 
                 <Field label="Quando" error={form.formState.errors.contactedOn?.message}>
-                  <Input type="date" max={todayISO()} {...form.register('contactedOn')} />
+                  <DateInput
+                    max={todayISO()}
+                    value={contactedOn}
+                    {...form.register('contactedOn')}
+                  />
                 </Field>
               </div>
 

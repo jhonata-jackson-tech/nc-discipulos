@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -134,7 +134,7 @@ function ThreadBody({ request }: { request: SupervisionRequestWithPeople }) {
               </Field>
 
               <Field label="Agendar para" htmlFor="scheduledFor">
-                <Input
+                <DateInput
                   id="scheduledFor"
                   type="datetime-local"
                   value={scheduledFor}

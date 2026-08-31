@@ -1,4 +1,4 @@
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { MessageSquare } from 'lucide-react'
@@ -8,7 +8,7 @@ import type { ContactChannel, GcIntent } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { useLogVisitorContact, useVisitorContacts, type Visitante } from './use-visitors'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
@@ -75,6 +75,8 @@ function Corpo({ visitante, onClose }: { visitante: Visitante; onClose: () => vo
     resolver: zodResolver(schema),
     defaultValues: { canal: 'whatsapp', quando: todayISO(), anotacao: '' },
   })
+
+  const quando = useWatch({ control: form.control, name: 'quando' })
 
   const onSubmit = form.handleSubmit(async (values) => {
     await registrar.mutateAsync({
@@ -157,7 +159,12 @@ function Corpo({ visitante, onClose }: { visitante: Visitante; onClose: () => vo
             htmlFor="contato-quando"
             error={form.formState.errors.quando?.message}
           >
-            <Input id="contato-quando" type="date" max={todayISO()} {...form.register('quando')} />
+            <DateInput
+              id="contato-quando"
+              max={todayISO()}
+              value={quando}
+              {...form.register('quando')}
+            />
           </Field>
         </div>
 

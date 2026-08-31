@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { careGenderLabel, roleLabel } from '@/lib/labels'
@@ -8,6 +8,7 @@ import { useSession } from '@/features/auth/session-context'
 import { useCreateMember, useSetAdmin, useUpdateMember } from './use-members'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Field } from '@/components/ui/field'
 import {
   Dialog,
@@ -79,6 +80,8 @@ export function MemberDialog({
     })
   }, [open, member, form])
 
+  const nascimento = useWatch({ control: form.control, name: 'birth_date' })
+
   const onSubmit = form.handleSubmit(async (values) => {
     const payload = {
       full_name: values.full_name,
@@ -137,7 +140,7 @@ export function MemberDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Aniversário" htmlFor="birth_date">
-              <Input id="birth_date" type="date" {...form.register('birth_date')} />
+              <DateInput id="birth_date" value={nascimento} {...form.register('birth_date')} />
             </Field>
 
             <Field label="Papel" required>

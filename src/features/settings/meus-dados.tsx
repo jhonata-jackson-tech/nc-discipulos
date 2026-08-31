@@ -15,6 +15,7 @@ import { FotoPerfil } from './foto-perfil'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Field } from '@/components/ui/field'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +64,8 @@ export function MeusDados() {
       })
     }
   }, [profile, form])
+
+  const nascimento = useWatch({ control: form.control, name: 'birth_date' })
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!profile) return
@@ -115,7 +118,7 @@ export function MeusDados() {
             </Field>
 
             <Field label="Aniversário" htmlFor="birth_date">
-              <Input id="birth_date" type="date" {...form.register('birth_date')} />
+              <DateInput id="birth_date" value={nascimento} {...form.register('birth_date')} />
             </Field>
 
             <Alert variant="info">

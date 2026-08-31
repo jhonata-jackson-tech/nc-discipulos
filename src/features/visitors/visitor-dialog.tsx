@@ -9,6 +9,7 @@ import { useActiveMembers } from '@/features/members/use-members'
 import { useSaveVisitor, type Visitante } from './use-visitors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Textarea } from '@/components/ui/textarea'
 import { Field } from '@/components/ui/field'
 import {
@@ -96,6 +97,8 @@ export function VisitorDialog({
   }, [open, visitante, form])
 
   const origem = useWatch({ control: form.control, name: 'origem' })
+  const primeiraVisita = useWatch({ control: form.control, name: 'primeiraVisita' })
+  const nascimento = useWatch({ control: form.control, name: 'nascimento' })
 
   const onSubmit = form.handleSubmit(async (values) => {
     await salvar.mutateAsync({
@@ -149,10 +152,10 @@ export function VisitorDialog({
               required
               error={form.formState.errors.primeiraVisita?.message}
             >
-              <Input
+              <DateInput
                 id="visitante-visita"
-                type="date"
                 max={todayISO()}
+                value={primeiraVisita}
                 {...form.register('primeiraVisita')}
               />
             </Field>
@@ -214,7 +217,11 @@ export function VisitorDialog({
             </Field>
 
             <Field label="Aniversário" htmlFor="visitante-nascimento">
-              <Input id="visitante-nascimento" type="date" {...form.register('nascimento')} />
+              <DateInput
+                id="visitante-nascimento"
+                value={nascimento}
+                {...form.register('nascimento')}
+              />
             </Field>
           </div>
 

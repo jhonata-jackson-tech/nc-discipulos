@@ -2,6 +2,7 @@ import * as React from 'react'
 import {
   AlertTriangle,
   CalendarPlus,
+  CalendarX2,
   CheckCircle2,
   Info,
   Repeat,
@@ -73,6 +74,7 @@ export function DistributionPage() {
   const setDraftAssignment = useSetDraftAssignment()
   const members = useActiveMembers()
 
+  const thisMonday = startOfWeek()
   const nextMonday = startOfWeek(addDays(todayISO(), 7))
   const [chosenWeekId, setChosenWeekId] = React.useState<string | null>(null)
 
@@ -89,6 +91,14 @@ export function DistributionPage() {
 
   const report = week?.generation_report
   const alreadyHasNextWeek = weeks.data?.some((item) => item.starts_on === nextMonday)
+
+  // Gerar sempre "a proxima" tem um buraco: quem gera na propria segunda pula a
+  // semana corrente, e o GC inteiro fica sem cuidado ate a outra comecar. Se a
+  // semana de hoje nao existe, ela vira o primeiro pedido da tela.
+  const faltaSemanaAtual =
+    weeks.isSuccess &&
+    (weeks.data?.length ?? 0) > 0 &&
+    !weeks.data?.some((item) => item.starts_on === thisMonday)
 
   const handleGenerate = async (startsOn: string) => {
     if (!group) return
@@ -107,16 +117,45 @@ export function DistributionPage() {
         title="Distribuição semanal"
         description="Gere o rascunho, confira a carga de cada cuidador e publique quando estiver certo."
         actions={
-          <Button
-            onClick={() => handleGenerate(nextMonday)}
-            loading={generate.isPending}
-            disabled={pendingGender.length > 0}
-          >
-            <CalendarPlus aria-hidden />
-            {alreadyHasNextWeek ? 'Regerar próxima semana' : 'Gerar próxima semana'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {faltaSemanaAtual && (
+              <Button
+                onClick={() => handleGenerate(thisMonday)}
+                loading={generate.isPending}
+                disabled={pendingGender.length > 0}
+              >
+                <CalendarPlus aria-hidden />
+                Gerar a semana atual
+              </Button>
+            )}
+            <Button
+              variant={faltaSemanaAtual ? 'outline' : 'default'}
+              onClick={() => handleGenerate(nextMonday)}
+              loading={generate.isPending}
+              disabled={pendingGender.length > 0}
+            >
+              {!faltaSemanaAtual && <CalendarPlus aria-hidden />}
+              {alreadyHasNextWeek ? 'Regerar próxima semana' : 'Gerar próxima semana'}
+            </Button>
+          </div>
         }
       />
+
+      {faltaSemanaAtual && (
+        <Alert variant="warning">
+          <CalendarX2 aria-hidden />
+          <div className="min-w-0 flex-1">
+            <AlertTitle>
+              A semana de {formatWeekRange(thisMonday, addDays(thisMonday, 6))} está sem
+              distribuição
+            </AlertTitle>
+            <AlertDescription>
+              Enquanto ela não for gerada e publicada, ninguém do GC vê cuidados na home — nem mesmo
+              se a próxima semana já estiver publicada.
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
 
       {pendingGender.length > 0 && (
         <Alert variant="warning">

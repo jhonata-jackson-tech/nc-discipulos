@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ActivityResponseBadge } from '@/components/common/badges'
 import { PresencaPendente } from '@/features/attendance/presenca-pendente'
+import type { CareWeek } from '@/types/database'
 import { TransfersInbox } from './transfers-inbox'
 import { GroupProgressCard } from './group-progress-card'
 import { SupervisorOverview } from './supervisor-overview'
@@ -50,6 +51,39 @@ function greeting(): string {
 }
 
 /**
+ * O vazio da home precisa dizer *por que* esta vazio. "Nenhuma semana
+ * publicada" e verdade demais e informacao de menos quando o GC ja rodou
+ * semanas: o que a pessoa precisa saber e que a semana anterior acabou e que
+ * a proxima ja tem data.
+ */
+function vazioDescricao({
+  encerrada,
+  proxima,
+  isLeader,
+}: {
+  encerrada: CareWeek | null
+  proxima: CareWeek | null
+  isLeader: boolean
+}): string {
+  const partes: string[] = []
+
+  if (encerrada) {
+    partes.push(`A semana de ${formatWeekRange(encerrada.starts_on, encerrada.ends_on)} terminou.`)
+  }
+  if (proxima) {
+    partes.push(`A próxima é de ${formatWeekRange(proxima.starts_on, proxima.ends_on)}.`)
+  }
+
+  partes.push(
+    isLeader
+      ? 'Gere e publique a distribuição desta semana para que todos vejam seus cuidados.'
+      : 'Assim que a liderança publicar a semana, ela aparece aqui.',
+  )
+
+  return partes.join(' ')
+}
+
+/**
  * "Minha semana" e a tela mais importante do produto: ela responde, de uma so
  * vez, o que esta pessoa precisa fazer nesta semana.
  */
@@ -59,9 +93,14 @@ export function MyWeekPage() {
   // fala de atividades e avisos, nao de carga de cuidado.
   const isCaregiver = role === 'leader' || role === 'disciple'
   const week = useCurrentWeek()
-  const assignments = useAssignments(week.data?.id, profile?.id)
+  // So a semana que cobre hoje vira "esta semana" na tela. Sem ela, a home nao
+  // pede emprestada a lista da semana passada: ela avisa que falta publicar.
+  const semana = week.data?.atual ?? null
+  const encerrada = week.data?.encerrada ?? null
+  const proxima = week.data?.proxima ?? null
+  const assignments = useAssignments(semana?.id, profile?.id)
   const transfers = useTransferRequests(profile?.id)
-  const activities = useActivities(week.data?.id)
+  const activities = useActivities(semana?.id)
   const members = useActiveMembers()
   const care = useCareActions()
 
@@ -104,27 +143,31 @@ export function MyWeekPage() {
       <PageHeader
         title={`${greeting()}, ${profile ? comoChamar(profile) : ''}`}
         description={
-          week.data
-            ? `Semana de ${formatWeekRange(week.data.starts_on, week.data.ends_on)}`
-            : 'Ainda não há uma semana publicada.'
+          semana
+            ? `Semana de ${formatWeekRange(semana.starts_on, semana.ends_on)}`
+            : proxima
+              ? `A próxima semana é de ${formatWeekRange(proxima.starts_on, proxima.ends_on)}`
+              : 'Ainda não há uma semana publicada.'
         }
       />
 
-      {!week.data && (
+      {!semana && (
         <Card>
           <CardContent className="p-0">
             <EmptyState
               icon={CalendarX2}
-              title="Nenhuma semana publicada ainda"
-              description={
-                isLeader
-                  ? 'Gere a distribuição da semana e publique para que todos vejam seus cuidados.'
-                  : 'Assim que a liderança publicar a semana, ela aparece aqui.'
+              title={
+                encerrada || proxima
+                  ? 'Esta semana ainda não tem distribuição'
+                  : 'Nenhuma semana publicada ainda'
               }
+              description={vazioDescricao({ encerrada, proxima, isLeader })}
               action={
                 isLeader ? (
                   <Button asChild>
-                    <Link to="/distribuicao">Gerar distribuição</Link>
+                    <Link to="/distribuicao">
+                      {encerrada || proxima ? 'Gerar a semana atual' : 'Gerar distribuição'}
+                    </Link>
                   </Button>
                 ) : undefined
               }
@@ -155,7 +198,7 @@ export function MyWeekPage() {
         </Alert>
       )}
 
-      {week.data && isCaregiver && (
+      {semana && isCaregiver && (
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile
             label="Pessoas para cuidar"
@@ -179,7 +222,7 @@ export function MyWeekPage() {
         </section>
       )}
 
-      {week.data && !isCaregiver && (
+      {semana && !isCaregiver && (
         <section className="grid grid-cols-2 gap-3">
           <StatTile
             label="Minhas atividades"
@@ -197,7 +240,7 @@ export function MyWeekPage() {
         </section>
       )}
 
-      {week.data && isCaregiver && myAssignments.length > 0 && (
+      {semana && isCaregiver && myAssignments.length > 0 && (
         <Card>
           <CardContent className="space-y-2 p-5">
             <div className="flex items-center justify-between text-sm">
@@ -224,7 +267,7 @@ export function MyWeekPage() {
       )}
 
       {/* ------------------------------------------------ pessoas para cuidar */}
-      {week.data && isCaregiver && (
+      {semana && isCaregiver && (
         <section aria-labelledby="pessoas-para-cuidar" className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h2 id="pessoas-para-cuidar" className="font-display text-lg font-semibold">
@@ -350,8 +393,8 @@ export function MyWeekPage() {
       )}
 
       {/* -------------------------------------------- visao geral por papel */}
-      {isLeader && <GroupProgressCard weekId={week.data?.id} />}
-      {isSupervisor && <SupervisorOverview weekId={week.data?.id} />}
+      {isLeader && <GroupProgressCard weekId={semana?.id} />}
+      {isSupervisor && <SupervisorOverview weekId={semana?.id} />}
 
       {care.dialogs}
     </div>

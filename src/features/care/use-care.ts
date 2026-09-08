@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { db } from '@/lib/db'
 import { useSession } from '@/features/auth/session-context'
-import { startOfWeek } from '@/lib/date'
+import { todayISO } from '@/lib/date'
+import { separarSemanas, type SemanaDaHome } from './semana-da-home'
 import type {
   CareAssignment,
   CareWeek,
@@ -23,7 +24,13 @@ export interface AssignmentWithPeople extends CareAssignment {
 const ASSIGNMENT_SELECT =
   '*, cared_for:profiles!care_assignments_cared_for_id_fkey(*), caregiver:profiles!care_assignments_caregiver_id_fkey(*)'
 
-/** Semana visivel para o usuario: a publicada mais recente que ja comecou. */
+/**
+ * A semana da home.
+ *
+ * Devolve as tres pontas - o que vale agora, o que acabou de terminar e o que
+ * ja vem publicado - para a tela poder contar a verdade quando a semana
+ * corrente ficou sem distribuicao.
+ */
 export function useCurrentWeek() {
   const { group } = useSession()
 
@@ -31,18 +38,16 @@ export function useCurrentWeek() {
     queryKey: ['current-week', group?.id],
     enabled: Boolean(group?.id),
     staleTime: 60_000,
-    queryFn: async () => {
+    queryFn: async (): Promise<SemanaDaHome> => {
       const { data, error } = await db
         .from('care_weeks')
         .select('*')
         .eq('group_id', group!.id)
-        .lte('starts_on', startOfWeek())
         .in('status', ['published', 'closed'])
         .order('starts_on', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .limit(8)
       if (error) throw error
-      return data as CareWeek | null
+      return separarSemanas((data ?? []) as CareWeek[], todayISO())
     },
   })
 }

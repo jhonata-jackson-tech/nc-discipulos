@@ -402,6 +402,21 @@ begin
     raise exception 'FALHA: a semana publicada sem uso nao voltou a rascunho ao ser refeita';
   end if;
 
+  -- 20b. a semana encerrada antes de comecar tambem pode ser refeita ---------
+  insert into public.care_weeks (group_id, starts_on, ends_on, seed, status, closed_at)
+  values (v_group, v_hoje + 30, v_hoje + 36, 'fechada-cedo', 'closed', now());
+  if app.bloqueio_para_iniciar(v_group, v_hoje + 30) is not null then
+    raise exception 'FALHA: bloqueou semana encerrada sem nenhum cuidado';
+  end if;
+  perform public.apply_week_generation(v_group, v_hoje + 30, v_hoje + 36, 'refeita', '[]'::jsonb, '{}'::jsonb);
+  if (select row(status, closed_at)::text from public.care_weeks
+       where group_id = v_group and starts_on = v_hoje + 30) <> row('draft'::public.care_week_status, null::timestamptz)::text then
+    raise exception 'FALHA: semana encerrada sem uso nao voltou a rascunho limpo';
+  end if;
+  if app.bloqueio_para_iniciar(v_group, v_hoje - 3) not like '%encerrada com cuidados%' then
+    raise exception 'FALHA: deixou refazer semana encerrada com cuidado registrado';
+  end if;
+
   -- 21. talk: sem PDF nao publica, e so quem conduz o GC e avisado -----------
   v_talk := public.salvar_talk(null, 8, 'Alegria como combustível da perseverança', 'Série 3',
                                v_hoje, null, 'https://open.spotify.com/playlist/x', null);

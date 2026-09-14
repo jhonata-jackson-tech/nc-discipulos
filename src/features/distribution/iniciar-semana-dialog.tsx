@@ -74,8 +74,9 @@ export function IniciarSemanaDialog({
   const [dia, setDia] = React.useState(diaInicial ?? hoje)
 
   const plano = planejarSemana(dia, semanas)
-  const refazPublicada = plano.refaz?.status === 'published' ? plano.refaz : null
-  const registrados = useCuidadosRegistrados(open ? refazPublicada?.id : undefined)
+  // Publicada ou encerrada, a pergunta é a mesma: alguém já trabalhou nela?
+  const refazOficial = plano.refaz && plano.refaz.status !== 'draft' ? plano.refaz : null
+  const registrados = useCuidadosRegistrados(open ? refazOficial?.id : undefined)
   const temTrabalho = (registrados.data ?? 0) > 0
 
   const atalhos = [
@@ -85,8 +86,7 @@ export function IniciarSemanaDialog({
       : []),
   ]
 
-  const impedido =
-    !dia || Boolean(plano.bloqueio) || temTrabalho || registrados.isLoading || bloqueadoPorGenero
+  const impedido = !dia || temTrabalho || registrados.isLoading || bloqueadoPorGenero
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,26 +132,23 @@ export function IniciarSemanaDialog({
           )}
 
           <ul className="space-y-2">
-            {plano.bloqueio && (
+            {refazOficial && temTrabalho && (
               <Aviso icone={Lock} tom="perigo">
-                {plano.bloqueio}
+                A semana de {formatWeekRange(refazOficial.starts_on, refazOficial.ends_on)}
+                {refazOficial.status === 'closed' ? ' já foi encerrada e tem ' : ' já tem '}
+                {registrados.data} cuidado(s) registrado(s) — não pode ser refeita.
+                {refazOficial.status === 'published'
+                  ? ' Para trocar quem cuida de quem, use o remanejamento.'
+                  : ' Escolha outro dia.'}
               </Aviso>
             )}
 
-            {refazPublicada && temTrabalho && (
-              <Aviso icone={Lock} tom="perigo">
-                A semana de {formatWeekRange(refazPublicada.starts_on, refazPublicada.ends_on)} já
-                tem {registrados.data} cuidado(s) registrado(s) e não pode ser refeita. Para trocar
-                quem cuida de quem, use o remanejamento.
-              </Aviso>
-            )}
-
-            {refazPublicada && !temTrabalho && !registrados.isLoading && (
+            {refazOficial && !temTrabalho && !registrados.isLoading && (
               <Aviso icone={RotateCcw} tom="atencao">
-                A semana de {formatWeekRange(refazPublicada.starts_on, refazPublicada.ends_on)} já
-                está publicada, mas ninguém registrou cuidado nela. Ela volta a ser rascunho e é
-                refeita com o histórico de agora — até você publicar de novo, a home do GC fica sem
-                lista.
+                A semana de {formatWeekRange(refazOficial.starts_on, refazOficial.ends_on)} já{' '}
+                {refazOficial.status === 'closed' ? 'foi encerrada' : 'está publicada'}, mas ninguém
+                registrou cuidado nela. Ela volta a ser rascunho e é refeita com o histórico de
+                agora — até você publicar, a home do GC fica sem lista.
               </Aviso>
             )}
 

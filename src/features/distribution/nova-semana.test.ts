@@ -21,7 +21,7 @@ function semana(startsOn: string, endsOn: string, status: CareWeekStatus = 'publ
 describe('planejarSemana', () => {
   it('dura sete dias quando nada atrapalha', () => {
     const plano = planejarSemana('2026-09-14', [])
-    expect(plano).toMatchObject({ inicio: '2026-09-14', fim: '2026-09-20', bloqueio: null })
+    expect(plano).toMatchObject({ inicio: '2026-09-14', fim: '2026-09-20', refaz: null })
   })
 
   it('refaz a semana publicada que começa no mesmo dia', () => {
@@ -32,9 +32,11 @@ describe('planejarSemana', () => {
     expect(plano.fim).toBe('2026-09-20')
   })
 
-  it('não deixa recomeçar uma semana encerrada', () => {
-    const plano = planejarSemana('2026-09-07', [semana('2026-09-07', '2026-09-13', 'closed')])
-    expect(plano.bloqueio).toContain('07/09')
+  it('refaz também a semana encerrada no mesmo dia — o banco confere se alguém a usou', () => {
+    const encerrada = semana('2026-09-14', '2026-09-20', 'closed')
+    const plano = planejarSemana('2026-09-14', [encerrada])
+    expect(plano.refaz).toBe(encerrada)
+    expect(plano.encurta).toBeNull()
   })
 
   it('começa no meio da semana e encurta a que estava valendo', () => {
@@ -68,6 +70,14 @@ describe('semanaDoDia', () => {
     const antiga = semana('2026-09-07', '2026-09-13')
     const nova = semana('2026-09-10', '2026-09-16')
     expect(semanaDoDia([antiga, nova], '2026-09-11')).toBe(nova)
+  })
+
+  it('não conta semana encerrada antes de começar', () => {
+    const fechadaCedo = {
+      ...semana('2026-09-14', '2026-09-20', 'closed'),
+      closed_at: '2026-09-08T02:40:00Z',
+    }
+    expect(semanaDoDia([fechadaCedo], '2026-09-14')).toBeNull()
   })
 
   it('não conta rascunho', () => {

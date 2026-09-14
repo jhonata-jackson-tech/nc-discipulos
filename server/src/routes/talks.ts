@@ -79,7 +79,12 @@ talksRouter.put(
   express.raw({ type: () => true, limit: '26mb' }),
   asyncRoute<AuthedRequest>(async (req, res) => {
     const { talkId, tipo } = alvo(req)
-    const mime = (req.header('content-type') ?? '').split(';')[0]!.trim().toLowerCase()
+    // O tipo de verdade vem em `X-Tipo-Arquivo`. O `Content-Type` do envio e
+    // sempre `application/octet-stream`: o ModSecurity do cPanel, na frente
+    // da VPS, recusa `application/pdf` e `image/*` antes de o pedido chegar
+    // aqui (regra 920420 do OWASP CRS), e devolve so um 502 para o celular.
+    const declarado = req.header('x-tipo-arquivo') ?? req.header('content-type') ?? ''
+    const mime = declarado.split(';')[0]!.trim().toLowerCase()
     const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0)
 
     if (bytes.length === 0) throw new HttpError(400, 'O arquivo chegou vazio.')

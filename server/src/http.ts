@@ -46,7 +46,17 @@ interface PgError {
  * traduzimos o codigo do Postgres para o status HTTP certo - a mensagem
  * escrita nas migrations chega intacta na tela.
  */
-export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(error: unknown, req: Request, res: Response, next: NextFunction) {
+  // Recusar um envio antes de ler o corpo inteiro (sessao vencida num PDF de
+  // 6 MB) fecha a conexao com o proxy ainda mandando bytes. O Apache da VPS
+  // chama isso de "broken pipe" e troca a resposta por um 502 sem mensagem.
+  // Esvaziar o corpo antes de responder faz a mensagem de verdade chegar.
+  if (!req.complete && !res.headersSent) {
+    req.resume()
+    req.once('end', () => errorHandler(error, req, res, next))
+    return
+  }
+
   if (error instanceof HttpError) {
     res
       .status(error.status)

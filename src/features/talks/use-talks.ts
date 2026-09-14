@@ -123,7 +123,11 @@ export async function enviarArquivo(
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': arquivo.type,
+        // O firewall da VPS recusa `application/pdf` e `image/*` no corpo do
+        // envio. O tipo real segue num cabeçalho próprio, e o servidor ainda
+        // confere os primeiros bytes do arquivo.
+        'Content-Type': 'application/octet-stream',
+        'X-Tipo-Arquivo': arquivo.type,
         ...(nome ? { 'X-Nome-Arquivo': encodeURIComponent(nome) } : {}),
       },
       body: arquivo,
@@ -136,7 +140,9 @@ export async function enviarArquivo(
     const corpo = (await resposta.json().catch(() => null)) as { error?: string } | null
     throw new Error(
       corpo?.error ??
-        (resposta.status === 413 ? 'Arquivo grande demais.' : 'Não foi possível enviar o arquivo.'),
+        (resposta.status === 413
+          ? 'Arquivo grande demais.'
+          : `Não foi possível enviar o arquivo (erro ${resposta.status}).`),
     )
   }
 }

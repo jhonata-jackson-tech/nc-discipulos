@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Cake,
   Mic,
   CalendarCheck,
   CalendarRange,
@@ -66,6 +67,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Mic,
     roles: ['supervisor', 'leader', 'disciple'],
     description: 'O material do GC da semana, e os das semanas anteriores',
+  },
+  {
+    to: '/aniversariantes',
+    label: 'Aniversariantes',
+    icon: Cake,
+    roles: ['supervisor', 'leader', 'disciple', 'member'],
+    description: 'Quem faz aniversário hoje e nos próximos dias',
   },
   {
     to: '/devocionais',

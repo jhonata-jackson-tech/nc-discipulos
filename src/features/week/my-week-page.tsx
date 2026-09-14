@@ -16,8 +16,7 @@ import { useAssignments, useCurrentWeek, useTransferRequests } from '@/features/
 import { useCareActions } from '@/features/care/use-care-actions'
 import { CareCard } from '@/features/care/care-card'
 import { useActivities } from '@/features/activities/use-activities'
-import { useActiveMembers } from '@/features/members/use-members'
-import { birthdayInWindow, formatDate, formatWeekRange } from '@/lib/date'
+import { formatDate, formatWeekRange, todayISO } from '@/lib/date'
 import { pluralize } from '@/lib/utils'
 import { comoChamar } from '@/lib/labels'
 import { Constancia } from './constancia'
@@ -25,13 +24,15 @@ import { PageHeader } from '@/components/common/page-header'
 import { StatTile } from '@/components/common/stat-tile'
 import { CardListSkeleton, ErrorState, StatsSkeleton } from '@/components/common/states'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ActivityResponseBadge } from '@/components/common/badges'
 import { PresencaPendente } from '@/features/attendance/presenca-pendente'
+import { AniversariantesDoDia } from '@/features/aniversariantes/aniversariantes-do-dia'
+import { diasAte } from '@/features/aniversariantes/lista'
+import { useAniversariantes } from '@/features/aniversariantes/use-aniversariantes'
 import { TalkDaSemanaCard } from '@/features/talks/talk-da-semana-card'
 import type { CareWeek } from '@/types/database'
 import { TransfersInbox } from './transfers-inbox'
@@ -102,7 +103,6 @@ export function MyWeekPage() {
   const assignments = useAssignments(semana?.id, profile?.id)
   const transfers = useTransferRequests(profile?.id)
   const activities = useActivities(semana?.id)
-  const members = useActiveMembers()
   const care = useCareActions()
 
   const myAssignments = assignments.data ?? []
@@ -123,10 +123,12 @@ export function MyWeekPage() {
 
   const attentionPoints = myAssignments.filter((a) => a.attention_level !== 'normal')
 
-  const birthdays = React.useMemo(
-    () => (members.data ?? []).filter((m) => m.birth_date && birthdayInWindow(m.birth_date, 10)),
-    [members.data],
-  )
+  // Os aniversários vêm da lista do GC, e não da data de nascimento do
+  // cadastro: é ela que tem os filhos e quem ainda não tem conta.
+  const aniversariantes = useAniversariantes()
+  const aniversariosPorPerto = (aniversariantes.data ?? []).filter(
+    (a) => diasAte(a.dia, a.mes, todayISO()) <= 10,
+  ).length
 
   if (week.isLoading) {
     return (
@@ -181,6 +183,8 @@ export function MyWeekPage() {
           presença no fim do GC leva um minuto; reconstruir quem estava na sala
           uma semana depois não tem como. */}
       <PresencaPendente />
+
+      <AniversariantesDoDia />
 
       {/* Só quem conduz o GC alcança o talk; para os outros o banco nem devolve. */}
       {role !== 'member' && <TalkDaSemanaCard />}
@@ -237,7 +241,7 @@ export function MyWeekPage() {
           />
           <StatTile
             label="Aniversariantes por perto"
-            value={birthdays.length}
+            value={aniversariosPorPerto}
             icon={Cake}
             tone="success"
           />
@@ -376,25 +380,6 @@ export function MyWeekPage() {
 
       {/* ---------------------------------------------------- transferencias */}
       <TransfersInbox />
-
-      {/* -------------------------------------------------- aniversariantes */}
-      {birthdays.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cake className="text-primary size-[18px]" aria-hidden />
-              Aniversariantes por perto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {birthdays.map((person) => (
-              <Badge key={person.id} variant="neutral">
-                {person.full_name} · {formatDate(person.birth_date)}
-              </Badge>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* -------------------------------------------- visao geral por papel */}
       {isLeader && <GroupProgressCard weekId={semana?.id} />}

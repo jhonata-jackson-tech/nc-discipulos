@@ -54,6 +54,11 @@ const TalksPage = lazy(() =>
 const TalkPage = lazy(() =>
   import('@/features/talks/talk-page').then((m) => ({ default: m.TalkPage })),
 )
+const AniversariantesPage = lazy(() =>
+  import('@/features/aniversariantes/aniversariantes-page').then((m) => ({
+    default: m.AniversariantesPage,
+  })),
+)
 const ReportsPage = lazy(() =>
   import('@/features/reports/reports-page').then((m) => ({ default: m.ReportsPage })),
 )
@@ -132,6 +137,9 @@ export const router = createBrowserRouter([
                   // decidido no banco, pelo alcance escolhido na publicação.
                   { path: '/devocionais', element: <DevotionalsPage /> },
                   { path: '/devocionais/:id', element: <DevotionalPage /> },
+                  // O GC inteiro vê; quem pode alterar é decidido na RLS, e a
+                  // tela só esconde os botões.
+                  { path: '/aniversariantes', element: <AniversariantesPage /> },
                   {
                     element: <RequireRole roles={['leader', 'supervisor', 'disciple']} />,
                     children: [

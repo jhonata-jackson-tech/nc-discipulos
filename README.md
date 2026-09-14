@@ -49,6 +49,7 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Relatórios com séries semana a semana e mapa de constância            | ✅       |
 | Relatório de encerramento: quem cuidou de quem e há quanto tempo sem  | ✅       |
 | Talks da semana: PDF, arte e playlists, só para quem conduz o GC      | ✅       |
+| Aniversariantes: lista do GC, colar do WhatsApp e aviso do dia        | ✅       |
 | Perfil (só ver) separado de Configurações (alterar)                   | ✅       |
 | Notificações internas                                                 | ✅       |
 | PWA instalável com cache do shell                                     | ✅       |

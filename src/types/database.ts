@@ -497,3 +497,17 @@ export interface Talk extends Omit<TalkCard, 'aberturas'> {
     | { id: string; nome: string; nomeCompleto: string; papel: AppRole; abriuEm: string | null }[]
     | null
 }
+
+// ============================================================ aniversariantes
+
+/** Alguém da lista de aniversariantes do GC. Sem ano: a lista não tem. */
+export interface Aniversariante {
+  id: string
+  nome: string
+  dia: number
+  mes: number
+  observacao: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}

@@ -516,6 +516,44 @@ begin
     raise exception 'FALHA: a lideranca nao ve que o discipulo abriu o talk';
   end if;
 
+  -- 23. aniversariantes: discipulo cuida, irmao so ve, aviso vai para quem conduz
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', u_disc, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  insert into public.aniversariantes (nome, dia, mes) values ('Ayla', 27, 7), ('Bissexto', 29, 2);
+
+  falhou := false;
+  begin
+    insert into public.aniversariantes (nome, dia, mes) values ('ayla ', 27, 7);
+  exception when unique_violation then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: a mesma pessoa entrou duas vezes na lista'; end if;
+
+  falhou := false;
+  begin
+    insert into public.aniversariantes (nome, dia, mes) values ('Ninguem', 31, 4);
+  exception when check_violation then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: aceitou 31 de abril'; end if;
+  reset role;
+
+  if (select count(*) from app.aniversariantes_de(date '2027-02-28') where nome = 'Bissexto') <> 1
+     or (select count(*) from app.aniversariantes_de(date '2028-02-28') where nome = 'Bissexto') <> 0 then
+    raise exception 'FALHA: 29 de fevereiro fora do bissexto';
+  end if;
+
+  update public.aniversariantes set dia = extract(day from app.hoje()), mes = extract(month from app.hoje())
+   where nome = 'Ayla'
+     and not (extract(month from app.hoje()) = 2 and extract(day from app.hoje()) = 29);
+  delete from public.notifications where title like '%aniversário%';
+  v_total := app.avisar_aniversarios();
+  if v_total = 0 or exists (
+    select 1 from public.notifications n join public.profiles p on p.id = n.profile_id
+     where n.title like '%Ayla%' and p.role = 'member'
+  ) then
+    raise exception 'FALHA: aviso de aniversario foi para quem nao devia (total %)', v_total;
+  end if;
+
   perform set_config('request.jwt.claims', '', true);
   raise notice 'semana no dia, relatorio e talk: 6 verificacoes passaram';
 end;

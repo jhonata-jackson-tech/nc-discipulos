@@ -50,6 +50,13 @@ describe('separarSemanas', () => {
     expect(separarSemanas([proxima, atual], '2026-09-14').atual).toBe(proxima)
   })
 
+  it('ignora a semana encerrada antes de comecar', () => {
+    const abandonada = { ...proxima, status: 'closed' as const, closed_at: '2026-09-08T02:40:00Z' }
+    const resultado = separarSemanas([abandonada, atual], '2026-09-14')
+    expect(resultado.atual).toBeNull()
+    expect(resultado.encerrada).toBe(atual)
+  })
+
   it('devolve tudo vazio quando o GC ainda nao tem semana', () => {
     expect(separarSemanas([], '2026-09-07')).toEqual({
       atual: null,

@@ -6,6 +6,7 @@ import { useAssignments, useWeeks } from './use-care'
 import { useCareActions } from './use-care-actions'
 import { CareCard } from './care-card'
 import { formatWeekRange, todayISO } from '@/lib/date'
+import { nuncaValeu } from '@/features/care/semana-da-home'
 import {
   assignmentOriginLabel,
   assignmentStatusLabel,
@@ -65,7 +66,7 @@ export function CarePage() {
   // A semana ja nao comeca sempre na segunda: vale a que comecou ate hoje.
   const thisWeek = todayISO()
   const defaultWeek =
-    visibleWeeks.find((week) => week.status !== 'draft' && week.starts_on <= thisWeek) ??
+    visibleWeeks.find((week) => week.status !== 'draft' && !nuncaValeu(week) && week.starts_on <= thisWeek) ??
     visibleWeeks[0]
   const weekId = selectedWeekId ?? defaultWeek?.id ?? ''
 

@@ -1,4 +1,5 @@
 import { addDays } from '@/lib/date'
+import { nuncaValeu } from '@/features/care/semana-da-home'
 import type { CareWeek } from '@/types/database'
 
 export interface PlanoDaSemana {
@@ -66,14 +67,7 @@ export function semanaDoDia(semanas: CareWeek[], dia: string): CareWeek | null {
   return (
     semanas
       .filter((semana) => semana.status !== 'draft')
-      .filter(
-        (semana) =>
-          !(
-            semana.status === 'closed' &&
-            semana.closed_at &&
-            semana.closed_at.slice(0, 10) < semana.starts_on
-          ),
-      )
+      .filter((semana) => !nuncaValeu(semana))
       .filter((semana) => semana.starts_on <= dia && dia <= semana.ends_on)
       .sort((a, b) => b.starts_on.localeCompare(a.starts_on))[0] ?? null
   )

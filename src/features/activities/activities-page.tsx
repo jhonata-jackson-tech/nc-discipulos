@@ -20,6 +20,7 @@ import {
 } from './use-activities'
 import { ActivityDialog } from './activity-dialog'
 import { formatDate, formatWeekRange, relativeDeadline, todayISO } from '@/lib/date'
+import { nuncaValeu } from '@/features/care/semana-da-home'
 import { activityResponseLabel, activityTypeLabel, weekStatusLabel } from '@/lib/labels'
 import type { ActivityResponse } from '@/types/database'
 import { PageHeader } from '@/components/common/page-header'
@@ -74,7 +75,7 @@ export function ActivitiesPage() {
   // A semana ja nao comeca sempre na segunda: vale a que comecou ate hoje.
   const thisWeek = todayISO()
   const defaultWeek =
-    weeks.data?.find((week) => week.status !== 'draft' && week.starts_on <= thisWeek) ??
+    weeks.data?.find((week) => week.status !== 'draft' && !nuncaValeu(week) && week.starts_on <= thisWeek) ??
     weeks.data?.[0]
   const weekId = selectedWeekId ?? defaultWeek?.id ?? ''
 

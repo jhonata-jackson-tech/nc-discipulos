@@ -81,6 +81,10 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      # O serviço de arquivos dos talks, no Brasil (veja arquivos/).
+      ARQUIVOS_URL: ${ARQUIVOS_URL:-}
+      ARQUIVOS_URL_INTERNA: ${ARQUIVOS_URL_INTERNA:-}
+      ARQUIVOS_SECRET: ${ARQUIVOS_SECRET:-}
     healthcheck:
       test: ['CMD', 'node', '-e', "fetch('http://localhost:3001/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s

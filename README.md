@@ -693,6 +693,42 @@ que sobrevive a reconstruções.
 > público repassado pelo Apache não casa e o Caddy responde 200 com corpo
 > vazio — o pior tipo de erro, o que parece ter funcionado.
 
+### Os arquivos dos talks moram no Brasil
+
+A VPS fica em Ashburn, na Virgínia, a ~190 ms do GC. Para página e JSON isso
+quase não aparece; para um PDF de 6 MB, sim: 25 segundos para subir, 12 para
+abrir — com o servidor respondendo em 0,07 s. Por isso o PDF e a arte dos talks
+moram em `arquivos/`, um serviço sem dependências que roda no **nwb-local**
+(Niterói) e é publicado pelo túnel da Cloudflare que a máquina já tem:
+
+```
+celular ──▶ Cloudflare ──▶ túnel ──▶ nwb-local:127.0.0.1:8130  (bytes)
+celular ──▶ VPS /api/talks/…/envio, /confirmar, /links        (quem pode)
+```
+
+O serviço de arquivos não conhece o banco. A API da VPS pergunta ao banco se a
+pessoa pode ler ou enviar, e assina um link estreito (`arquivos/assinatura.mjs`,
+HMAC com `ARQUIVOS_SECRET`); o serviço só confere a assinatura. O banco guarda
+tipo, nome, tamanho e hash — não mais os bytes.
+
+No nwb-local:
+
+```bash
+cd ~/discipulos-arquivos          # cópia de arquivos/
+cp .env.example .env              # o mesmo ARQUIVOS_SECRET da VPS
+docker compose up -d --build
+```
+
+No painel da Cloudflare (Zero Trust → Networks → Tunnels → o túnel do
+nwb-local → Public hostnames): `discipulos-arquivos.igrejanovoscomecos.com.br`
+→ `http://localhost:8130`. Um nível só de subdomínio de propósito: o
+certificado gratuito da Cloudflare cobre `*.igrejanovoscomecos.com.br`, mas não
+`*.discipulos.igrejanovoscomecos.com.br`.
+
+No `.env` da VPS: `ARQUIVOS_URL=https://discipulos-arquivos.igrejanovoscomecos.com.br`
+e o mesmo `ARQUIVOS_SECRET`. Os arquivos ficam em `~/discipulos-arquivos/dados`
+— é essa pasta que precisa entrar no backup da máquina.
+
 ### Quando a máquina já tem um servidor web
 
 Se a VPS já atende outros sites (um Apache do cPanel, por exemplo), tomar as

@@ -4,7 +4,7 @@ import { addDays, formatDate, todayISO } from '@/lib/date'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { CapaDoTalk } from './capa'
-import { useChaveDeArquivos, useTalks } from './use-talks'
+import { useLinksDosTalks, useTalks } from './use-talks'
 
 /**
  * O talk da semana na home de quem conduz o GC.
@@ -18,7 +18,7 @@ export function TalkDaSemanaCard() {
   const talk = talks.data?.find(
     (t) => t.situacao === 'published' && t.semanaDe >= addDays(hoje, -6),
   )
-  const chave = useChaveDeArquivos(Boolean(talk))
+  const links = useLinksDosTalks(Boolean(talk))
 
   if (!talk) return null
 
@@ -26,7 +26,11 @@ export function TalkDaSemanaCard() {
     <Link to={`/talks/${talk.id}`} className="block">
       <Card className="hover:border-primary/40 transition-colors">
         <CardContent className="flex items-center gap-3 p-3">
-          <CapaDoTalk talk={talk} chave={chave.data} className="w-14 shrink-0 rounded-md" />
+          <CapaDoTalk
+            talk={talk}
+            links={links.data?.[talk.id]}
+            className="w-14 shrink-0 rounded-md"
+          />
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
               Talk da semana

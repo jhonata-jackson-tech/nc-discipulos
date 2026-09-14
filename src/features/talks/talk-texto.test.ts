@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   comoFrase,
+  comoLink,
   lerNomeDoPdf,
-  linkDoSpotify,
-  linkDoYoutube,
-  playlistDoYoutubeIncompleta,
   proximoDiaDeGc,
   tamanhoLegivel,
   tituloDoTalk,
@@ -50,29 +48,19 @@ describe('proximoDiaDeGc', () => {
   })
 })
 
-describe('links', () => {
-  it('reconhece Spotify e YouTube', () => {
-    expect(
-      linkDoSpotify(
-        'https://open.spotify.com/playlist/6nr80Y4cyAKR4uZY37ehi6?si=QwEt84f2QQaMu1xvhUv7LA',
-      ),
-    ).toBe(true)
-    expect(
-      linkDoYoutube('https://youtube.com/playlist?list=PLRx1hpupIYVg&si=3KXycjAOGm3eoa3h'),
-    ).toBe(true)
-    expect(linkDoSpotify('https://youtube.com/playlist?list=x')).toBe(false)
+describe('comoLink', () => {
+  it('abre o link do jeito que foi colado', () => {
+    const spotify =
+      'https://open.spotify.com/playlist/6nr80Y4cyAKR4uZY37ehi6?si=QwEt84f2QQaMu1xvhUv7LA'
+    expect(comoLink(spotify)).toBe(spotify)
+    expect(comoLink('  spotify:playlist:6nr80  ')).toBe('spotify:playlist:6nr80')
   })
 
-  it('percebe a playlist do YouTube colada pela metade', () => {
-    expect(
-      playlistDoYoutubeIncompleta('https://youtube.com/playlist?list=PLRx1hpupIYVg&si=3K'),
-    ).toBe(true)
-    expect(
-      playlistDoYoutubeIncompleta(
-        'https://youtube.com/playlist?list=PLRx1hpupIYVgAbCdEfGhIjKlMnOpQrStU',
-      ),
-    ).toBe(false)
-    expect(playlistDoYoutubeIncompleta('https://youtu.be/abc')).toBe(false)
+  it('completa o https quando o link veio sem ele', () => {
+    expect(comoLink('youtube.com/playlist?list=PLRx1hpupIYVg')).toBe(
+      'https://youtube.com/playlist?list=PLRx1hpupIYVg',
+    )
+    expect(comoLink('   ')).toBe('')
   })
 })
 

@@ -37,29 +37,18 @@ export function proximoDiaDeGc(diaDaSemana: number, apartir: string = todayISO()
   return addDays(apartir, diferenca)
 }
 
-/** Aceita só o endereço do serviço certo; o banco confere de novo. */
-export function linkDoSpotify(url: string): boolean {
-  return /^https:\/\/([a-z0-9-]+\.)*spotify\.com\//i.test(url.trim())
-}
-
-export function linkDoYoutube(url: string): boolean {
-  return /^https:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be)\//i.test(url.trim())
-}
-
 /**
- * Link de playlist do YouTube que parece cortado.
+ * O endereço para abrir um link colado.
  *
- * Os identificadores de playlist têm dezenas de caracteres ("PL" + 16 ou 32).
- * Um link colado pela metade abre uma página de erro na quinta à noite; avisar
- * na hora de salvar custa uma linha.
+ * O link é guardado exatamente como veio — encurtado, com parâmetros, do app de
+ * música. Só na hora de abrir, se ele veio sem `https://`, o app completa: sem
+ * isso o navegador trataria "open.spotify.com/…" como um caminho dentro do
+ * próprio Discípulos.
  */
-export function playlistDoYoutubeIncompleta(url: string): boolean {
-  try {
-    const lista = new URL(url.trim()).searchParams.get('list')
-    return lista !== null && lista.length < 18
-  } catch {
-    return false
-  }
+export function comoLink(colado: string): string {
+  const limpo = colado.trim()
+  if (!limpo) return ''
+  return /^[a-z][a-z0-9+.-]*:/i.test(limpo) ? limpo : `https://${limpo}`
 }
 
 export function tamanhoLegivel(bytes: number): string {

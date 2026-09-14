@@ -1,0 +1,27 @@
+# =============================================================================
+# Discípulos :: serviço de arquivos (roda no nwb-local, não na VPS)
+#
+# Escuta só em 127.0.0.1: quem fala com ele de fora é o cloudflared da máquina,
+# que publica discipulos-arquivos.igrejanovoscomecos.com.br. Nenhuma porta
+# aberta para a internet.
+#
+#   cp .env.example .env    # o mesmo ARQUIVOS_SECRET do .env da VPS
+#   docker compose up -d --build
+# =============================================================================
+name: discipulos-arquivos
+
+services:
+  arquivos:
+    build: .
+    restart: unless-stopped
+    environment:
+      ARQUIVOS_SECRET: ${ARQUIVOS_SECRET:?defina ARQUIVOS_SECRET no .env}
+      ORIGENS: ${ORIGENS:-https://discipulos.igrejanovoscomecos.com.br}
+      PASTA: /dados
+      PORT: '8130'
+    ports:
+      - '127.0.0.1:8130:8130'
+    volumes:
+      # Pasta do host, e não volume do Docker: é o que entra no backup da
+      # máquina e o que dá para copiar com um `rsync` se um dia mudar de lugar.
+      - ./dados:/dados

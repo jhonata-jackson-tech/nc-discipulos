@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import type { TalkCard } from '@/types/database'
 import { CapaDoTalk } from './capa'
 import { TalkDialog } from './talk-dialog'
-import { useChaveDeArquivos, useTalks } from './use-talks'
+import { useLinksDosTalks, useTalks } from './use-talks'
 
 /**
  * O talk da semana e os das semanas anteriores.
@@ -22,7 +22,7 @@ import { useChaveDeArquivos, useTalks } from './use-talks'
 export function TalksPage() {
   const { isLeader, isLeadership } = useSession()
   const talks = useTalks()
-  const chave = useChaveDeArquivos()
+  const links = useLinksDosTalks()
   const navegar = useNavigate()
   const [params, setParams] = useSearchParams()
 
@@ -82,7 +82,11 @@ export function TalksPage() {
           <Link to={`/talks/${daSemana.id}`} className="block">
             <Card className="hover:border-primary/40 transition-colors">
               <CardContent className="flex gap-4 p-4">
-                <CapaDoTalk talk={daSemana} chave={chave.data} className="w-24 shrink-0 sm:w-32" />
+                <CapaDoTalk
+                  talk={daSemana}
+                  links={links.data?.[daSemana.id]}
+                  className="w-24 shrink-0 sm:w-32"
+                />
                 <div className="min-w-0 flex-1 space-y-1.5">
                   {daSemana.serie && (
                     <p className="text-muted-foreground text-xs font-medium uppercase">
@@ -115,7 +119,7 @@ export function TalksPage() {
                 <Link to={`/talks/${talk.id}`} className="group block space-y-2">
                   <CapaDoTalk
                     talk={talk}
-                    chave={chave.data}
+                    links={links.data?.[talk.id]}
                     className="group-hover:ring-primary/40 transition-shadow group-hover:ring-2"
                   />
                   <div className="space-y-1">

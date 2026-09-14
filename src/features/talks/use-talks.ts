@@ -28,43 +28,57 @@ export function useTalk(id: string | undefined) {
   })
 }
 
+export type LinksDoTalk = Partial<Record<TalkArquivoTipo, string>>
+
 /**
- * A chave que vai no endereço dos arquivos.
+ * Os endereços dos arquivos de todos os talks que esta pessoa alcança.
  *
- * `<img>` e `<a href>` não mandam o token de sessão, então o servidor emite uma
- * chave só para baixar arquivo. Ela vale por pelo menos doze horas e é a mesma
- * durante a janela — é o que deixa o navegador guardar a capa.
+ * Os arquivos moram num serviço no Brasil, e ele só entrega com um link
+ * assinado pela API — que antes pergunta ao banco se a pessoa pode ver. O link
+ * é o mesmo por pelo menos doze horas e muda quando o arquivo muda: é o que
+ * deixa o navegador guardar a capa sem nunca mostrar a arte antiga.
  */
-export function useChaveDeArquivos(ligada = true) {
+export function useLinksDosTalks(ligado = true) {
   return useQuery({
-    queryKey: ['chave-arquivos'],
-    enabled: ligada,
+    queryKey: ['talk-links'],
+    enabled: ligado,
     staleTime: 4 * 60 * 60_000,
     gcTime: 8 * 60 * 60_000,
     queryFn: async () => {
-      const token = await getAccessToken()
-      if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
-      const resposta = await fetch(apiUrl('/api/arquivos/chave'), {
+      const corpo = await chamarApi<{ links: Record<string, LinksDoTalk> }>('/api/talks/links', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
       })
-      if (!resposta.ok) throw new Error('Não foi possível liberar os arquivos do talk.')
-      const corpo = (await resposta.json()) as { chave: string }
-      return corpo.chave
+      return corpo.links
     },
   })
 }
 
-export function arquivoUrl(
-  talkId: string,
-  tipo: TalkArquivoTipo,
-  chave: string,
-  versao: number,
-  baixar = false,
-): string {
-  const busca = new URLSearchParams({ v: String(versao), chave })
-  if (baixar) busca.set('baixar', '1')
-  return apiUrl(`/api/talks/${talkId}/arquivos/${tipo}?${busca}`)
+/** O link com `baixar=1`: o arquivo vem para salvar, em vez de abrir. */
+export const paraBaixar = (url: string) => `${url}&baixar=1`
+
+async function chamarApi<T = void>(caminho: string, init: RequestInit = {}): Promise<T> {
+  const token = await getAccessToken()
+  if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
+
+  let resposta: Response
+  try {
+    resposta = await fetch(apiUrl(caminho), {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+    })
+  } catch {
+    throw new Error('Não foi possível falar com o servidor. Verifique sua conexão.')
+  }
+
+  if (!resposta.ok) {
+    const corpo = (await resposta.json().catch(() => null)) as { error?: string } | null
+    throw new Error(corpo?.error ?? `Algo deu errado (erro ${resposta.status}).`)
+  }
+
+  return (resposta.status === 204 ? undefined : await resposta.json()) as T
 }
 
 export interface SalvarTalkInput {
@@ -98,63 +112,62 @@ export function useSalvarTalk() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['talks'] })
       queryClient.invalidateQueries({ queryKey: ['talk'] })
+      queryClient.invalidateQueries({ queryKey: ['talk-links'] })
     },
   })
 }
 
 /**
- * Envia um arquivo cru para o servidor.
+ * Manda o arquivo direto do celular para o serviço de arquivos, no Brasil.
  *
- * Não passa pelo PostgREST: um PDF de 6 MB em base64 dentro de JSON pesaria 8
- * MB e travaria o celular de quem envia.
+ * Três passos: a API autoriza (e confere no banco que é líder), o arquivo sobe
+ * direto para o serviço — sem passar pela VPS nos EUA —, e a API registra o
+ * que chegou, perguntando o tamanho ao próprio serviço.
+ *
+ * `XMLHttpRequest` e não `fetch` por um motivo só: é o único que conta o
+ * progresso do envio. "Enviando… 62%" é a diferença entre esperar e achar que
+ * travou.
  */
 export async function enviarArquivo(
   talkId: string,
   tipo: TalkArquivoTipo,
   arquivo: Blob,
   nome?: string,
+  aoProgredir?: (fracao: number) => void,
 ) {
-  const token = await getAccessToken()
-  if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
+  const base = `/api/talks/${talkId}/arquivos/${tipo}`
+  const { url } = await chamarApi<{ url: string }>(`${base}/envio`, {
+    method: 'POST',
+    body: JSON.stringify({ mime: arquivo.type, nome, tamanho: arquivo.size }),
+  })
 
-  let resposta: Response
-  try {
-    resposta = await fetch(apiUrl(`/api/talks/${talkId}/arquivos/${tipo}`), {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // O firewall da VPS recusa `application/pdf` e `image/*` no corpo do
-        // envio. O tipo real segue num cabeçalho próprio, e o servidor ainda
-        // confere os primeiros bytes do arquivo.
-        'Content-Type': 'application/octet-stream',
-        'X-Tipo-Arquivo': arquivo.type,
-        ...(nome ? { 'X-Nome-Arquivo': encodeURIComponent(nome) } : {}),
-      },
-      body: arquivo,
-    })
-  } catch {
-    throw new Error('Não foi possível enviar o arquivo. Verifique sua conexão.')
-  }
+  await new Promise<void>((resolver, rejeitar) => {
+    const pedido = new XMLHttpRequest()
+    pedido.open('PUT', url)
+    pedido.setRequestHeader('Content-Type', arquivo.type || 'application/octet-stream')
+    pedido.upload.onprogress = (evento) => {
+      if (evento.lengthComputable) aoProgredir?.(evento.loaded / evento.total)
+    }
+    pedido.onload = () => {
+      if (pedido.status >= 200 && pedido.status < 300) return resolver()
+      let mensagem = `Não foi possível enviar o arquivo (erro ${pedido.status}).`
+      try {
+        mensagem = (JSON.parse(pedido.responseText) as { error?: string }).error ?? mensagem
+      } catch {
+        // Fica a mensagem com o código.
+      }
+      rejeitar(new Error(mensagem))
+    }
+    pedido.onerror = () =>
+      rejeitar(new Error('O envio caiu no meio. Verifique sua conexão e tente de novo.'))
+    pedido.send(arquivo)
+  })
 
-  if (!resposta.ok) {
-    const corpo = (await resposta.json().catch(() => null)) as { error?: string } | null
-    throw new Error(
-      corpo?.error ??
-        (resposta.status === 413
-          ? 'Arquivo grande demais.'
-          : `Não foi possível enviar o arquivo (erro ${resposta.status}).`),
-    )
-  }
+  await chamarApi(`${base}/confirmar`, { method: 'POST', body: '{}' })
 }
 
 export async function apagarArquivo(talkId: string, tipo: TalkArquivoTipo) {
-  const token = await getAccessToken()
-  if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
-  const resposta = await fetch(apiUrl(`/api/talks/${talkId}/arquivos/${tipo}`), {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!resposta.ok) throw new Error('Não foi possível remover o arquivo.')
+  await chamarApi(`/api/talks/${talkId}/arquivos/${tipo}`, { method: 'DELETE' })
 }
 
 /** Publicar é o gesto que dispara o aviso. Não tem volta, e a tela avisa antes. */
@@ -178,11 +191,12 @@ export function useApagarTalk() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await db.rpc('apagar_talk', { p_id: id })
-      if (error) throw error
+      // Pela API, e não direto no banco: a pasta dos arquivos sai junto.
+      await chamarApi(`/api/talks/${id}`, { method: 'DELETE' })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['talks'] })
+      queryClient.invalidateQueries({ queryKey: ['talk-links'] })
       toast.success('Talk removido.')
     },
   })

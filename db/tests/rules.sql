@@ -418,8 +418,9 @@ begin
   end if;
 
   -- 21. talk: sem PDF nao publica, e so quem conduz o GC e avisado -----------
+  -- Link colado do jeito que veio: sem https, encurtado - o banco nao implica.
   v_talk := public.salvar_talk(null, 8, 'Alegria como combustível da perseverança', 'Série 3',
-                               v_hoje, null, 'https://open.spotify.com/playlist/x', null);
+                               v_hoje, null, 'open.spotify.com/playlist/x?si=1', 'youtu.be/abc');
 
   falhou := false;
   begin
@@ -430,13 +431,13 @@ begin
 
   falhou := false;
   begin
-    perform public.salvar_arquivo_talk(v_talk, 'pdf', 'image/png', 'x.png', '\x89504e47'::bytea);
+    perform public.registrar_arquivo_talk(v_talk, 'pdf', 'image/png', 'x.png', 4, 'abc');
   exception when check_violation then falhou := true;
   end;
   if not falhou then raise exception 'FALHA: aceitou imagem no lugar do PDF'; end if;
 
-  perform public.salvar_arquivo_talk(v_talk, 'pdf', 'application/pdf', 'tema8.pdf',
-                                     convert_to('%PDF-1.4 teste', 'UTF8'));
+  perform public.registrar_arquivo_talk(v_talk, 'pdf', 'application/pdf', 'tema8.pdf',
+                                       6128349, 'hash-do-pdf');
   perform public.publicar_talk(v_talk);
 
   select count(*) into v_total
@@ -457,9 +458,16 @@ begin
   if public.talk(v_talk) is null or public.talk(v_rascunho) is not null then
     raise exception 'FALHA: alcance do talk errado para o discipulo';
   end if;
-  if not exists (select 1 from public.arquivo_talk(v_talk, 'pdf')) then
-    raise exception 'FALHA: o discipulo nao consegue baixar o PDF publicado';
+  if public.talk(v_talk) #>> '{arquivos,pdf,tamanho}' is distinct from '6128349' then
+    raise exception 'FALHA: o discipulo nao enxerga o PDF publicado';
   end if;
+
+  falhou := false;
+  begin
+    perform public.pode_enviar_arquivo_talk(v_talk);
+  exception when insufficient_privilege then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: discipulo recebeu permissao para enviar arquivo'; end if;
   if public.talk(v_talk) -> 'leituras' <> 'null'::jsonb then
     raise exception 'FALHA: o discipulo esta vendo quem abriu o talk';
   end if;

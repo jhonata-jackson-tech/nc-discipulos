@@ -83,6 +83,10 @@ export default defineConfig({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // O leitor de PDF (~1,8 MB com o worker) só serve a quem abre um talk.
+        // Fora do cache de instalação, ele baixa na primeira leitura e fica no
+        // cache do navegador - em vez de pesar na instalação de todo mundo.
+        globIgnores: ['**/pdf-*.js', '**/pdf.worker*'],
       },
       devOptions: { enabled: false },
     }),

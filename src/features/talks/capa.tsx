@@ -1,7 +1,7 @@
 import { Mic } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TalkCard } from '@/types/database'
-import { arquivoUrl } from './use-talks'
+import type { LinksDoTalk } from './use-talks'
 
 /**
  * A capa de um talk: a arte reduzida, ou — quando não há arte — o tema escrito
@@ -9,23 +9,22 @@ import { arquivoUrl } from './use-talks'
  */
 export function CapaDoTalk({
   talk,
-  chave,
+  links,
   tamanho = 'capa',
   className,
 }: {
-  talk: Pick<TalkCard, 'id' | 'numero' | 'tema' | 'arquivos'>
-  chave: string | undefined
+  talk: Pick<TalkCard, 'numero' | 'tema'>
+  links: LinksDoTalk | undefined
   /** `arte` só na tela do talk; no resto, a miniatura basta. */
   tamanho?: 'capa' | 'arte'
   className?: string
 }) {
-  const arquivo = talk.arquivos[tamanho] ?? talk.arquivos.capa ?? talk.arquivos.arte
-  const tipo = talk.arquivos[tamanho] ? tamanho : talk.arquivos.capa ? 'capa' : 'arte'
+  const url = links?.[tamanho] ?? links?.capa ?? links?.arte
 
-  if (arquivo && chave) {
+  if (url) {
     return (
       <img
-        src={arquivoUrl(talk.id, tipo, chave, arquivo.versao)}
+        src={url}
         alt={`Arte do talk: ${talk.tema}`}
         loading="lazy"
         decoding="async"

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -35,12 +35,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { Talk } from '@/types/database'
 import { CapaDoTalk } from './capa'
-import { tamanhoLegivel } from './talk-texto'
+import { LeitorDePdf } from './leitor-pdf'
+import { comoLink, tamanhoLegivel, tituloDoTalk } from './talk-texto'
 import {
-  arquivoUrl,
+  paraBaixar,
   useAbrirTalk,
   useApagarTalk,
-  useChaveDeArquivos,
+  useLinksDosTalks,
   usePublicarTalk,
   useTalk,
 } from './use-talks'
@@ -52,14 +53,13 @@ import {
  * a imagem só na hora do toque às vezes passa desse prazo e o gesto some sem
  * erro nenhum — então ela vem antes, junto com a tela.
  */
-function useArteParaCompartilhar(talk: Talk | null | undefined, chave: string | undefined) {
-  const arte = talk?.arquivos.arte
+function useArteParaCompartilhar(talk: Talk | null | undefined, url: string | undefined) {
   return useQuery({
-    queryKey: ['talk-arte', talk?.id, arte?.versao],
-    enabled: Boolean(talk && arte && chave && typeof navigator.share === 'function'),
+    queryKey: ['talk-arte', url],
+    enabled: Boolean(talk && url && typeof navigator.share === 'function'),
     staleTime: Infinity,
     queryFn: async () => {
-      const resposta = await fetch(arquivoUrl(talk!.id, 'arte', chave!, arte!.versao))
+      const resposta = await fetch(url!)
       if (!resposta.ok) throw new Error('Não foi possível baixar a arte.')
       const blob = await resposta.blob()
       return new File([blob], `talk-${talk!.numero ?? 'gc'}.jpg`, {
@@ -74,11 +74,22 @@ export function TalkPage() {
   const { isLeader, isLeadership } = useSession()
   const navegar = useNavigate()
   const talk = useTalk(id)
-  const chave = useChaveDeArquivos()
+  const todosOsLinks = useLinksDosTalks()
+  const links = id ? todosOsLinks.data?.[id] : undefined
   const abrir = useAbrirTalk()
   const publicar = usePublicarTalk()
   const apagar = useApagarTalk()
-  const arteBaixada = useArteParaCompartilhar(talk.data, chave.data)
+  const arteBaixada = useArteParaCompartilhar(talk.data, links?.arte)
+
+  // O leitor aberto mora na URL: o voltar do Android e o gesto do iPhone
+  // fecham o leitor, em vez de sair da tela do talk.
+  const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const lendo = params.get('ler') === '1'
+  const fecharLeitor = () => {
+    if (location.key !== 'default') navegar(-1)
+    else setParams({}, { replace: true })
+  }
 
   if (talk.isLoading) return <CardListSkeleton rows={3} />
   if (talk.isError) return <ErrorState error={talk.error} onRetry={() => talk.refetch()} />
@@ -121,8 +132,8 @@ export function TalkPage() {
       }
       return
     }
-    if (arte && chave.data) {
-      window.open(arquivoUrl(t.id, 'arte', chave.data, arte.versao, true), '_blank', 'noopener')
+    if (links?.arte) {
+      window.open(paraBaixar(links.arte), '_blank', 'noopener')
     } else {
       toast.error('A arte ainda está carregando. Tente de novo em instantes.')
     }
@@ -208,7 +219,7 @@ export function TalkPage() {
       <div className="grid gap-5 md:grid-cols-[minmax(0,17rem)_1fr]">
         <CapaDoTalk
           talk={t}
-          chave={chave.data}
+          links={links}
           tamanho="arte"
           className="mx-auto max-w-[17rem] shadow-sm md:mx-0"
         />
@@ -234,37 +245,29 @@ export function TalkPage() {
           )}
 
           <div className="grid gap-2 sm:grid-cols-2">
-            {pdf && chave.data ? (
+            {pdf && (
               <>
-                {/* Link de verdade, e não um fetch: é o que abre o leitor de
-                    PDF do próprio celular, inclusive no app instalado. */}
-                <Button asChild size="lg" className="sm:col-span-2">
-                  <a
-                    href={arquivoUrl(t.id, 'pdf', chave.data, pdf.versao)}
-                    target="_blank"
-                    rel="noopener"
-                    onClick={marcarAberto}
-                  >
-                    <FileText aria-hidden />
-                    Abrir o talk (PDF)
-                  </a>
+                <Button
+                  size="lg"
+                  className="sm:col-span-2"
+                  loading={!links?.pdf}
+                  onClick={() => {
+                    marcarAberto()
+                    setParams({ ler: '1' })
+                  }}
+                >
+                  <FileText aria-hidden />
+                  Abrir o talk
                 </Button>
-                <Button asChild variant="outline">
-                  <a
-                    href={arquivoUrl(t.id, 'pdf', chave.data, pdf.versao, true)}
-                    onClick={marcarAberto}
-                  >
-                    <Download aria-hidden />
-                    Baixar · {tamanhoLegivel(pdf.tamanho)}
-                  </a>
-                </Button>
+                {links?.pdf && (
+                  <Button asChild variant="outline">
+                    <a href={paraBaixar(links.pdf)} onClick={marcarAberto}>
+                      <Download aria-hidden />
+                      Baixar · {tamanhoLegivel(pdf.tamanho)}
+                    </a>
+                  </Button>
+                )}
               </>
-            ) : (
-              pdf && (
-                <Button size="lg" className="sm:col-span-2" loading>
-                  Preparando o PDF…
-                </Button>
-              )
             )}
 
             {arte && (
@@ -276,7 +279,7 @@ export function TalkPage() {
 
             {t.spotifyUrl && (
               <Button asChild variant="outline">
-                <a href={t.spotifyUrl} target="_blank" rel="noopener noreferrer">
+                <a href={comoLink(t.spotifyUrl)} target="_blank" rel="noopener noreferrer">
                   <ListMusic aria-hidden />
                   Playlist no Spotify
                 </a>
@@ -285,7 +288,7 @@ export function TalkPage() {
 
             {t.youtubeUrl && (
               <Button asChild variant="outline">
-                <a href={t.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                <a href={comoLink(t.youtubeUrl)} target="_blank" rel="noopener noreferrer">
                   <SquarePlay aria-hidden />
                   Playlist no YouTube
                 </a>
@@ -302,6 +305,14 @@ export function TalkPage() {
       </div>
 
       {isLeadership && !rascunho && t.leituras && <QuemAbriu leituras={t.leituras} />}
+
+      <LeitorDePdf
+        url={links?.pdf}
+        urlParaBaixar={links?.pdf ? paraBaixar(links.pdf) : undefined}
+        titulo={tituloDoTalk(t)}
+        aberto={lendo && Boolean(pdf)}
+        onFechar={fecharLeitor}
+      />
     </div>
   )
 }

@@ -45,6 +45,33 @@ export const config = {
    * sem aviso fora da tela. Gere com `npm run vapid`.
    */
   vapid: vapidKeys(),
+
+  /**
+   * O serviço de arquivos dos talks (`arquivos/`, no Brasil). Opcional como o
+   * push: sem ele, só a área de talks deixa de aceitar e entregar arquivos.
+   */
+  arquivos: servicoDeArquivos(),
+}
+
+function servicoDeArquivos() {
+  const url = process.env.ARQUIVOS_URL?.trim().replace(/\/+$/, '')
+  const segredo = process.env.ARQUIVOS_SECRET ?? ''
+  if (!url || !segredo) return null
+
+  if (segredo.length < 32) {
+    throw new Error('ARQUIVOS_SECRET precisa ter pelo menos 32 caracteres.')
+  }
+
+  return {
+    /** O endereço que o celular usa. */
+    url,
+    /**
+     * O endereço que esta API usa para conferir e apagar. Normalmente o mesmo;
+     * existe para o dia em que os dois estiverem na mesma rede.
+     */
+    urlInterna: process.env.ARQUIVOS_URL_INTERNA?.trim().replace(/\/+$/, '') || url,
+    segredo,
+  }
 }
 
 function vapidKeys() {

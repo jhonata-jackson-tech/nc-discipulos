@@ -13,6 +13,8 @@ RUN npm ci --no-audit --no-fund
 WORKDIR /app
 COPY server/ ./server/
 COPY src/domain/ ./src/domain/
+# A assinatura dos links de arquivo é a mesma que o serviço de arquivos confere.
+COPY arquivos/assinatura.mjs arquivos/assinatura.d.mts ./arquivos/
 
 WORKDIR /app/server
 RUN npx tsc --noEmit && npm run build

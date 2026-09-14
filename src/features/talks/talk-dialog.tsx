@@ -22,20 +22,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { TalkCard } from '@/types/database'
-import {
-  lerNomeDoPdf,
-  linkDoSpotify,
-  linkDoYoutube,
-  playlistDoYoutubeIncompleta,
-  proximoDiaDeGc,
-  tamanhoLegivel,
-} from './talk-texto'
+import { Progress } from '@/components/ui/progress'
+import { lerNomeDoPdf, proximoDiaDeGc, tamanhoLegivel } from './talk-texto'
 import {
   apagarArquivo,
-  arquivoUrl,
   enviarArquivo,
   prepararArte,
-  useChaveDeArquivos,
+  useLinksDosTalks,
   useSalvarTalk,
   useTalk,
 } from './use-talks'
@@ -47,14 +40,10 @@ const schema = z.object({
   tema: z.string().trim().min(3, 'Qual é o tema do talk?'),
   serie: z.string().trim(),
   semanaDe: z.string().min(10, 'Para qual GC é este talk?'),
-  spotifyUrl: z
-    .string()
-    .trim()
-    .refine((v) => !v || linkDoSpotify(v), 'Cole o link do Spotify (open.spotify.com/…).'),
-  youtubeUrl: z
-    .string()
-    .trim()
-    .refine((v) => !v || linkDoYoutube(v), 'Cole o link do YouTube (youtube.com/…).'),
+  // Os links são guardados como foram colados. Quem cola sabe o que está
+  // colando; conferir formato só atrapalhava link encurtado e de aplicativo.
+  spotifyUrl: z.string().trim(),
+  youtubeUrl: z.string().trim(),
   mensagem: z.string().trim(),
 })
 
@@ -86,12 +75,14 @@ export function TalkDialog({
   const queryClient = useQueryClient()
   const existente = useTalk(open && talkId ? talkId : undefined)
   const salvar = useSalvarTalk()
-  const chave = useChaveDeArquivos(open && Boolean(talkId))
+  const links = useLinksDosTalks(open && Boolean(talkId))
 
   const [pdf, setPdf] = React.useState<File | null>(null)
   const [arte, setArte] = React.useState<File | null>(null)
   const [removerArte, setRemoverArte] = React.useState(false)
   const [etapa, setEtapa] = React.useState<string | null>(null)
+  // 0 a 1 enquanto um arquivo sobe; nulo nas etapas sem medida.
+  const [progresso, setProgresso] = React.useState<number | null>(null)
   const [previa, setPrevia] = React.useState<string | null>(null)
   // Se o talk novo foi salvo e só o arquivo falhou, a segunda tentativa
   // continua o mesmo talk em vez de criar outro igual.
@@ -143,7 +134,6 @@ export function TalkDialog({
   )
 
   const semanaDe = useWatch({ control: form.control, name: 'semanaDe' })
-  const youtubeUrl = useWatch({ control: form.control, name: 'youtubeUrl' })
 
   const escolherPdf = (arquivo: File | undefined) => {
     if (!arquivo) return
@@ -167,6 +157,7 @@ export function TalkDialog({
   const atual = existente.data
   const pdfAtual = atual?.arquivos.pdf
   const arteAtual = atual?.arquivos.arte && !removerArte ? atual.arquivos.arte : null
+  const capaAtual = talkId ? (links.data?.[talkId]?.capa ?? links.data?.[talkId]?.arte) : undefined
   const carregando = Boolean(talkId) && existente.isLoading
   const enviando = salvar.isPending || etapa !== null
 
@@ -189,24 +180,33 @@ export function TalkDialog({
       if (!talkId) setCriadoId(id)
 
       if (pdf) {
-        setEtapa(`Enviando o PDF (${tamanhoLegivel(pdf.size)})…`)
-        // Alguns celulares entregam PDF sem tipo; o servidor confere os bytes.
-        const corpo = pdf.type ? pdf : new Blob([pdf], { type: 'application/pdf' })
-        await enviarArquivo(id, 'pdf', corpo, pdf.name)
+        setEtapa(`Enviando o PDF · ${tamanhoLegivel(pdf.size)}`)
+        setProgresso(0)
+        // Alguns celulares entregam PDF sem tipo; o serviço confere os bytes.
+        const corpo =
+          pdf.type === 'application/pdf' ? pdf : new Blob([pdf], { type: 'application/pdf' })
+        await enviarArquivo(id, 'pdf', corpo, pdf.name, setProgresso)
       }
 
       if (arte) {
-        setEtapa('Preparando a arte…')
+        setEtapa('Preparando a arte')
+        setProgresso(null)
         const preparada = await prepararArte(arte)
-        setEtapa('Enviando a arte…')
-        await enviarArquivo(id, 'arte', preparada.arte, arte.name.replace(/\.\w+$/, '.jpg'))
-        await enviarArquivo(id, 'capa', preparada.capa)
+        setEtapa('Enviando a arte')
+        setProgresso(0)
+        await enviarArquivo(id, 'arte', preparada.arte, arte.name.replace(/\.\w+$/, '.jpg'), (f) =>
+          setProgresso(f * 0.85),
+        )
+        await enviarArquivo(id, 'capa', preparada.capa, undefined, (f) =>
+          setProgresso(0.85 + f * 0.15),
+        )
       } else if (removerArte && atual?.arquivos.arte) {
         await apagarArquivo(id, 'arte')
       }
 
       queryClient.invalidateQueries({ queryKey: ['talks'] })
       queryClient.invalidateQueries({ queryKey: ['talk', id] })
+      queryClient.invalidateQueries({ queryKey: ['talk-links'] })
       toast.success(talkId ? 'Talk atualizado.' : 'Rascunho salvo. Confira e publique.')
       onSalvo(id)
     } catch (erro) {
@@ -215,6 +215,7 @@ export function TalkDialog({
       if (salvou) toast.error(friendlyError(erro))
     } finally {
       setEtapa(null)
+      setProgresso(null)
     }
   })
 
@@ -323,17 +324,9 @@ export function TalkDialog({
               hint="A capa do talk no app. Dá para compartilhar no status depois."
             >
               <div className="flex items-center gap-3">
-                {(previa || (arteAtual && chave.data && atual)) && (
+                {(previa || (arteAtual && capaAtual)) && (
                   <img
-                    src={
-                      previa ??
-                      arquivoUrl(
-                        atual!.id,
-                        'capa',
-                        chave.data!,
-                        atual!.arquivos.capa?.versao ?? arteAtual!.versao,
-                      )
-                    }
+                    src={previa ?? capaAtual}
                     alt=""
                     className="bg-secondary h-24 w-14 shrink-0 rounded-md object-cover"
                   />
@@ -383,8 +376,11 @@ export function TalkDialog({
               >
                 <Input
                   id="talk-spotify"
-                  type="url"
+                  type="text"
                   inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="https://open.spotify.com/playlist/…"
                   {...form.register('spotifyUrl')}
                 />
@@ -393,16 +389,14 @@ export function TalkDialog({
                 label="Playlist no YouTube"
                 htmlFor="talk-youtube"
                 error={form.formState.errors.youtubeUrl?.message}
-                hint={
-                  youtubeUrl && playlistDoYoutubeIncompleta(youtubeUrl)
-                    ? '⚠️ Este link parece cortado — confira se ele abre a playlist.'
-                    : undefined
-                }
               >
                 <Input
                   id="talk-youtube"
-                  type="url"
+                  type="text"
                   inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="https://youtube.com/playlist?list=…"
                   {...form.register('youtubeUrl')}
                 />
@@ -417,10 +411,27 @@ export function TalkDialog({
               <Textarea id="talk-mensagem" rows={3} {...form.register('mensagem')} />
             </Field>
 
+            {etapa && (
+              <div className="bg-secondary/60 space-y-2 rounded-lg px-4 py-3" role="status">
+                <div className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium">{etapa}…</span>
+                  {progresso !== null && (
+                    <span className="tabular text-muted-foreground">
+                      {Math.round(progresso * 100)}%
+                    </span>
+                  )}
+                </div>
+                <Progress
+                  value={progresso === null ? undefined : Math.round(progresso * 100)}
+                  aria-label={etapa}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Pode demorar um pouco no 4G. Não feche esta tela até terminar.
+                </p>
+              </div>
+            )}
+
             <DialogFooter>
-              {etapa && (
-                <p className="text-muted-foreground mr-auto self-center text-xs">{etapa}</p>
-              )}
               <Button
                 type="button"
                 variant="outline"

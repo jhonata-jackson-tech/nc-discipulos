@@ -142,6 +142,23 @@ describe('distribuicao semanal - elenco atual do GC', () => {
     expect(b.assignments).toEqual(a.assignments)
   })
 
+  it('sorteia outra combinacao sem soltar a dupla que ja tem cuidado registrado', () => {
+    const preso = { caregiverId: 'jenifer', caredForId: 'camila' }
+    const variacoes = ['a', 'b', 'c'].map((v) =>
+      generateDistribution({ ...input, seed: `semana-teste|${v}`, pinnedPairs: [preso] }),
+    )
+
+    for (const resultado of variacoes) {
+      expect(resultado.assignments).toContainEqual({ ...preso, origin: 'manual' })
+      expect(resultado.assignments.filter((a) => a.caredForId === 'camila')).toHaveLength(1)
+      for (const pool of resultado.pools) {
+        const totais = pool.loads.map((l) => l.total)
+        expect(Math.max(...totais) - Math.min(...totais)).toBeLessThanOrEqual(1)
+      }
+    }
+    expect(variacoes[1]!.assignments).not.toEqual(variacoes[0]!.assignments)
+  })
+
   it('muda a distribuicao quando a semente da semana muda', () => {
     const a = generateDistribution(input)
     const b = generateDistribution({ ...input, seed: 'outra-semana' })

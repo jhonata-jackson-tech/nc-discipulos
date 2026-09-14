@@ -29,7 +29,17 @@ export class GenerationError extends Error {
 export function useGenerateWeek() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ groupId, startsOn }: { groupId: string; startsOn: string }) => {
+    mutationFn: async ({
+      groupId,
+      startsOn,
+      outraCombinacao,
+    }: {
+      groupId: string
+      startsOn: string
+      /** Sorteia outra combinação para a mesma semana, com uma semente nova. */
+      outraCombinacao?: boolean
+    }) => {
+      const variacao = outraCombinacao ? crypto.randomUUID().slice(0, 8) : undefined
       const token = await getAccessToken()
       if (!token) throw new GenerationError('Sua sessão expirou. Entre novamente.')
 
@@ -38,7 +48,7 @@ export function useGenerateWeek() {
         response = await fetch(apiUrl('/api/gerar-semana'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ groupId, startsOn }),
+          body: JSON.stringify({ groupId, startsOn, variacao }),
         })
       } catch {
         throw new GenerationError('Não foi possível falar com o servidor. Verifique sua conexão.')
@@ -58,11 +68,15 @@ export function useGenerateWeek() {
 
       return body as GenerateWeekResponse
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['weeks'] })
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
       queryClient.invalidateQueries({ queryKey: ['week', data.weekId] })
-      toast.success(`Rascunho gerado com ${data.assignments} cuidados.`)
+      toast.success(
+        variables.outraCombinacao
+          ? 'Nova combinação gerada. Confira e publique quando estiver certo.'
+          : `Rascunho gerado com ${data.assignments} cuidados.`,
+      )
     },
     onError: (error: GenerationError) => toast.error(error.message),
   })

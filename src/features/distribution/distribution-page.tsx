@@ -221,6 +221,22 @@ export function DistributionPage() {
 
             <div className="ms-auto flex flex-wrap gap-2">
               {week?.status === 'draft' && (
+                <OutraCombinacao
+                  manuais={(assignments.data ?? []).filter((a) => a.origin === 'manual').length}
+                  comCuidado={(assignments.data ?? []).filter((a) => a.last_contact_at).length}
+                  gerando={generate.isPending}
+                  onConfirmar={() => {
+                    if (!group) return
+                    generate.mutate({
+                      groupId: group.id,
+                      startsOn: week.starts_on,
+                      outraCombinacao: true,
+                    })
+                  }}
+                />
+              )}
+
+              {week?.status === 'draft' && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button loading={publish.isPending}>
@@ -479,5 +495,50 @@ function RemanejarDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Sortear de novo o rascunho.
+ *
+ * As regras são as mesmas de sempre — homem com homem, discipulado fixo, sem
+ * repetir dupla recente, carga equilibrada —; muda só o desempate entre as
+ * combinações igualmente boas. Quem já tem cuidado registrado fica com quem
+ * está. O que se perde são os ajustes feitos à mão, e a confirmação diz isso.
+ */
+function OutraCombinacao({
+  manuais,
+  comCuidado,
+  gerando,
+  onConfirmar,
+}: {
+  manuais: number
+  comCuidado: number
+  gerando: boolean
+  onConfirmar: () => void
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" loading={gerando}>
+          <Shuffle aria-hidden />
+          Outra combinação
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogTitle>Gerar outra combinação?</AlertDialogTitle>
+        <AlertDialogDescription>
+          O rascunho é sorteado de novo, com as mesmas regras: discipulado fixo, sem repetir duplas
+          recentes e carga equilibrada.
+          {comCuidado > 0 &&
+            ` ${comCuidado} dupla(s) com cuidado já registrado continuam como estão.`}
+          {manuais > comCuidado && ' Os ajustes que você fez à mão neste rascunho se perdem.'}
+        </AlertDialogDescription>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Manter esta</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirmar}>Sortear de novo</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

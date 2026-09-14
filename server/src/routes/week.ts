@@ -29,6 +29,12 @@ weekRouter.post(
   asyncRoute<AuthedRequest>(async (req, res) => {
     const groupId = typeof req.body?.groupId === 'string' ? req.body.groupId : ''
     const startsOn = typeof req.body?.startsOn === 'string' ? req.body.startsOn : ''
+    // "Outra combinacao": a mesma semana com outra semente. Sem variacao, a
+    // geracao continua reproduzivel - mesma semana, mesmas duplas.
+    const variacao =
+      typeof req.body?.variacao === 'string' && /^[\w-]{1,40}$/.test(req.body.variacao)
+        ? req.body.variacao
+        : ''
 
     if (!groupId || !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
       throw new HttpError(400, 'Informe o GC e o dia em que a semana começa.')
@@ -60,9 +66,13 @@ weekRouter.post(
         throw new HttpError(409, bloqueio, 'WEEK_LOCKED')
       }
 
+      const seed = variacao
+        ? `${(input as unknown as { seed: string }).seed}|${variacao}`
+        : (input as unknown as { seed: string }).seed
+
       let result
       try {
-        result = generateDistribution(input)
+        result = generateDistribution({ ...input, seed })
       } catch (error) {
         if (error instanceof DistributionError) {
           throw new HttpError(422, error.message, error.code, error.details)
@@ -78,7 +88,7 @@ weekRouter.post(
           // O banco ainda pode encurtar: a semana termina na vespera da
           // proxima que ja estiver publicada.
           addDays(startsOn, 6),
-          (input as unknown as { seed: string }).seed,
+          seed,
           JSON.stringify(result.assignments),
           JSON.stringify({
             pools: result.pools,

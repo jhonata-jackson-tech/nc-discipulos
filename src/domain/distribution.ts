@@ -44,10 +44,20 @@ export interface PairHistory {
   timesUsed: number
 }
 
+/**
+ * Uma dupla que nao pode mudar ao sortear de novo: ja existe cuidado registrado
+ * nela. Sortear outra combinacao nao pode apagar o trabalho de ninguem.
+ */
+export interface PinnedPair {
+  caregiverId: string
+  caredForId: string
+}
+
 export interface DistributionInput {
   seed: string
   participants: Participant[]
   fixedLinks: FixedLink[]
+  pinnedPairs?: PinnedPair[]
   restrictions: Restriction[]
   history: PairHistory[]
   /** Quantas vezes cada cuidador ja absorveu a vaga extra do arredondamento. */
@@ -57,7 +67,7 @@ export interface DistributionInput {
 export interface GeneratedAssignment {
   caregiverId: string
   caredForId: string
-  origin: Extract<AssignmentOrigin, 'fixed_disciple' | 'rotation'>
+  origin: Extract<AssignmentOrigin, 'fixed_disciple' | 'rotation' | 'manual'>
 }
 
 export interface CaregiverLoad {
@@ -170,6 +180,7 @@ export function generateDistribution(input: DistributionInput): DistributionResu
       restricted,
       historyByPair,
       fixedLinks: input.fixedLinks,
+      pinnedPairs: input.pinnedPairs ?? [],
       extraSlotHistory: input.extraSlotHistory ?? {},
     })
 
@@ -190,6 +201,7 @@ interface PoolContext {
   restricted: Set<string>
   historyByPair: Map<string, PairHistory>
   fixedLinks: FixedLink[]
+  pinnedPairs: PinnedPair[]
   extraSlotHistory: Record<string, number>
 }
 
@@ -240,6 +252,20 @@ function buildPool(ctx: PoolContext): {
   const isBlocked = (caregiverId: string, caredForId: string) =>
     caregiverId === caredForId || restricted.has(restrictionKey(caregiverId, caredForId))
 
+  // ------------------------------------------ 0. duplas com cuidado registrado
+  // Vem antes de tudo e contam na carga como os fixos: a combinacao nova se
+  // arranja em volta delas, em vez de desfazer o que alguem ja fez.
+  const caregiverIdsDoPool = new Set(caregivers.map((c) => c.id))
+  for (const par of ctx.pinnedPairs) {
+    const cuidado = byId.get(par.caredForId)
+    if (!cuidado || !inPool(cuidado) || !caregiverIdsDoPool.has(par.caregiverId)) continue
+    if (assigned.has(par.caredForId)) continue
+    assignments.push({ caregiverId: par.caregiverId, caredForId: par.caredForId, origin: 'manual' })
+    assigned.add(par.caredForId)
+    load.set(par.caregiverId, (load.get(par.caregiverId) ?? 0) + 1)
+    fixedCount.set(par.caregiverId, (fixedCount.get(par.caregiverId) ?? 0) + 1)
+  }
+
   // -------------------------------------------------- 1. cuidados fixos
   // Cada discipulo permanece com o seu lider primario, e isso conta na carga
   // semanal do lider.
@@ -254,6 +280,7 @@ function buildPool(ctx: PoolContext): {
 
   for (const link of fixedForPool) {
     const disciple = byId.get(link.discipleId)!
+    if (assigned.has(link.discipleId)) continue
     if (!caregiverIds.has(link.leaderId)) {
       warnings.push(`${disciple.fullName} tem lider primario fora do rodizio desta semana.`)
       continue
@@ -290,8 +317,20 @@ function buildPool(ctx: PoolContext): {
   // cuidado do GC. A vaga e reservada mesmo que ela leve o lider a uma pessoa
   // acima do piso: e uma pessoa a mais de proposito, nao um desequilibrio.
   const doGc = (person: Participant) => person.role === 'member'
+  const doGcPorId = (id: string) => {
+    const pessoa = byId.get(id)
+    return Boolean(pessoa && doGc(pessoa))
+  }
   const gcDisponivel = remaining.some(doGc)
-  const precisaDoGc = (caregiver: Participant) => caregiver.role === 'leader' && gcDisponivel
+  // Quem ja tem alguem do GC preso numa dupla com cuidado registrado ja cumpriu
+  // a regra; reservar outra vaga seria pesar a mao sobre essa pessoa.
+  const jaTemDoGc = new Set(
+    assignments
+      .filter((a) => a.origin === 'manual' && doGcPorId(a.caredForId))
+      .map((a) => a.caregiverId),
+  )
+  const precisaDoGc = (caregiver: Participant) =>
+    caregiver.role === 'leader' && gcDisponivel && !jaTemDoGc.has(caregiver.id)
   const lideres = caregivers.filter(precisaDoGc)
 
   // ------------------------------------ 4. rodizio como fluxo de custo minimo

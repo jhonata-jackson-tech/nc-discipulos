@@ -417,6 +417,33 @@ begin
     raise exception 'FALHA: deixou refazer semana encerrada com cuidado registrado';
   end if;
 
+  -- 20c. outra combinacao num rascunho nao apaga cuidado ja registrado -------
+  v_rascunho := public.apply_week_generation(
+    v_group, v_hoje + 60, v_hoje + 66, 'sorteio-1',
+    jsonb_build_array(jsonb_build_object('caregiverId', lider, 'caredForId', irmao)), '{}'::jsonb);
+  insert into public.contact_logs (assignment_id, author_id, channel, got_reply, well_being)
+  select id, lider, 'whatsapp', false, 'sem_resposta'
+    from public.care_assignments where week_id = v_rascunho and cared_for_id = irmao;
+  update public.care_assignments set status = 'awaiting_reply'
+   where week_id = v_rascunho and cared_for_id = irmao;
+
+  if public.get_distribution_input(v_group, v_hoje + 60) -> 'pinnedPairs'
+     <> jsonb_build_array(jsonb_build_object('caregiverId', lider, 'caredForId', irmao)) then
+    raise exception 'FALHA: a leitura nao prendeu a dupla com cuidado registrado';
+  end if;
+
+  perform public.apply_week_generation(
+    v_group, v_hoje + 60, v_hoje + 66, 'sorteio-2',
+    jsonb_build_array(jsonb_build_object('caregiverId', lider, 'caredForId', irmao, 'origin', 'manual')),
+    '{}'::jsonb);
+
+  if (select count(*) from public.contact_logs l
+        join public.care_assignments a on a.id = l.assignment_id
+       where a.week_id = v_rascunho and a.cared_for_id = irmao and a.status = 'awaiting_reply') <> 1
+     or (select seed from public.care_weeks where id = v_rascunho) <> 'sorteio-2' then
+    raise exception 'FALHA: outra combinacao apagou o cuidado registrado no rascunho';
+  end if;
+
   -- 21. talk: sem PDF nao publica, e so quem conduz o GC e avisado -----------
   -- Link colado do jeito que veio: sem https, encurtado - o banco nao implica.
   v_talk := public.salvar_talk(null, 8, 'Alegria como combustível da perseverança', 'Série 3',

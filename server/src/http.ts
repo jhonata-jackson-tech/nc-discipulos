@@ -64,7 +64,8 @@ export function errorHandler(error: unknown, _req: Request, res: Response, _next
     res.status(403).json({ error: pg.message })
     return
   }
-  if (pg?.code === 'P0001' && pg.message) {
+  // 23514 = check_violation: as regras de negocio escritas nas migrations.
+  if ((pg?.code === 'P0001' || pg?.code === '23514') && pg.message) {
     res.status(422).json({ error: pg.message })
     return
   }

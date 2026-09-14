@@ -286,3 +286,187 @@ begin
   raise notice 'visitantes e chamada: 5 verificacoes passaram';
 end;
 $$;
+
+-- =============================================================================
+-- A semana que comeca no dia, o relatorio do encerramento e o talk
+--
+-- Estas funcoes exigem sessao (lider, discipulo), entao o bloco cria contas
+-- descartaveis e assume a identidade delas como o PostgREST faria. O gatilho
+-- de convite fica desligado so aqui: este banco e jogado fora no fim.
+-- =============================================================================
+do $$
+declare
+  v_group uuid;
+  lider uuid;
+  disc uuid;
+  irmao uuid;
+  u_lider uuid := gen_random_uuid();
+  u_disc uuid := gen_random_uuid();
+  v_hoje date := app.hoje();
+  v_antiga uuid;
+  v_nova uuid;
+  v_atrib uuid;
+  v_rel jsonb;
+  v_talk uuid;
+  v_rascunho uuid;
+  v_texto text;
+  v_total int;
+  falhou boolean;
+begin
+  select id into v_group from public.groups limit 1;
+  select id into lider from public.profiles where full_name = 'Jhonata Jackson';
+  select id into disc from public.profiles where full_name = 'Felipe Freitas';
+  select id into irmao from public.profiles where full_name = 'Anderson';
+
+  alter table auth.users disable trigger on_auth_user_created;
+  insert into auth.users (id, email, encrypted_password)
+  values (u_lider, 'lider.teste@exemplo.com', 'x'), (u_disc, 'disc.teste@exemplo.com', 'x');
+  update public.profiles set user_id = u_lider where id = lider;
+  update public.profiles set user_id = u_disc where id = disc;
+  alter table auth.users enable trigger on_auth_user_created;
+
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', u_lider, 'role', 'authenticated')::text, true);
+
+  -- 17. a semana publicada que ninguem usou pode ser refeita ------------------
+  insert into public.care_weeks (group_id, starts_on, ends_on, seed, status, published_at)
+  values (v_group, v_hoje - 3, v_hoje + 3, 'teste', 'published', now())
+  returning id into v_antiga;
+  insert into public.care_assignments (week_id, caregiver_id, cared_for_id)
+  values (v_antiga, lider, irmao)
+  returning id into v_atrib;
+
+  if app.bloqueio_para_iniciar(v_group, v_hoje - 3) is not null then
+    raise exception 'FALHA: bloqueou uma semana publicada sem nenhum cuidado';
+  end if;
+
+  insert into public.contact_logs (assignment_id, author_id, channel, got_reply, well_being)
+  values (v_atrib, lider, 'whatsapp', true, 'bem');
+  update public.care_assignments set status = 'contacted' where id = v_atrib;
+
+  v_texto := app.bloqueio_para_iniciar(v_group, v_hoje - 3);
+  if v_texto is null or v_texto not like '%cuidados registrados%' then
+    raise exception 'FALHA: deixou refazer semana com cuidado registrado -> %', v_texto;
+  end if;
+
+  -- 18. comecar hoje encerra a que estava valendo, na vespera -----------------
+  v_nova := public.apply_week_generation(
+    v_group, v_hoje, v_hoje + 6, 'teste-hoje',
+    jsonb_build_array(jsonb_build_object('caregiverId', disc, 'caredForId', irmao)),
+    '{}'::jsonb);
+
+  if (select status from public.care_weeks where id = v_nova) <> 'draft' then
+    raise exception 'FALHA: a geracao nao nasceu rascunho';
+  end if;
+  if (select status from public.care_weeks where id = v_antiga) <> 'published' then
+    raise exception 'FALHA: gerar rascunho mexeu na semana que esta valendo';
+  end if;
+
+  perform public.publish_care_week(v_nova);
+
+  if (select row(status, ends_on)::text from public.care_weeks where id = v_antiga)
+     <> row('closed'::public.care_week_status, v_hoje - 1)::text then
+    raise exception 'FALHA: a semana anterior nao terminou na vespera da nova -> %',
+      (select row(status, ends_on)::text from public.care_weeks where id = v_antiga);
+  end if;
+
+  select count(*) into v_total from public.notifications
+   where link = '/agenda/' || v_antiga and title like 'Relatório da semana%';
+  if v_total = 0 then
+    raise exception 'FALHA: encerrar nao mandou o relatorio para a lideranca';
+  end if;
+
+  -- 19. o relatorio responde quem cuidou de quem ------------------------------
+  v_rel := public.relatorio_semana(v_antiga);
+  if (v_rel #>> '{resumo,combinados}')::int <> 1 or (v_rel #>> '{resumo,cuidados}')::int <> 1 then
+    raise exception 'FALHA: numeros do relatorio errados -> %', v_rel -> 'resumo';
+  end if;
+  if v_rel #>> '{cuidadores,0,situacao}' <> 'todos'
+     or v_rel #>> '{cuidadores,0,pessoas,0,comoEsta}' <> 'bem' then
+    raise exception 'FALHA: relatorio nao mostra quem cuidou de quem -> %', v_rel -> 'cuidadores';
+  end if;
+  if jsonb_typeof(v_rel -> 'semCuidadoHaMais') <> 'array' then
+    raise exception 'FALHA: relatorio sem a lista de quem esta ha mais tempo sem cuidado';
+  end if;
+
+  -- 20. rascunho nao se encerra, e semana publicada sem uso volta a rascunho --
+  perform public.apply_week_generation(v_group, v_hoje, v_hoje + 6, 'de-novo', '[]'::jsonb, '{}'::jsonb);
+
+  falhou := false;
+  begin
+    perform public.close_care_week(v_nova);
+  exception when check_violation then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: encerrou uma semana em rascunho'; end if;
+  if (select status from public.care_weeks where id = v_nova) <> 'draft' then
+    raise exception 'FALHA: a semana publicada sem uso nao voltou a rascunho ao ser refeita';
+  end if;
+
+  -- 21. talk: sem PDF nao publica, e so quem conduz o GC e avisado -----------
+  v_talk := public.salvar_talk(null, 8, 'Alegria como combustível da perseverança', 'Série 3',
+                               v_hoje, null, 'https://open.spotify.com/playlist/x', null);
+
+  falhou := false;
+  begin
+    perform public.publicar_talk(v_talk);
+  exception when check_violation then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: publicou talk sem PDF'; end if;
+
+  falhou := false;
+  begin
+    perform public.salvar_arquivo_talk(v_talk, 'pdf', 'image/png', 'x.png', '\x89504e47'::bytea);
+  exception when check_violation then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: aceitou imagem no lugar do PDF'; end if;
+
+  perform public.salvar_arquivo_talk(v_talk, 'pdf', 'application/pdf', 'tema8.pdf',
+                                     convert_to('%PDF-1.4 teste', 'UTF8'));
+  perform public.publicar_talk(v_talk);
+
+  select count(*) into v_total
+    from public.notifications n join public.profiles p on p.id = n.profile_id
+   where n.link = '/talks/' || v_talk and p.role = 'member';
+  if v_total > 0 then raise exception 'FALHA: irmao/irma recebeu aviso do talk'; end if;
+
+  select count(*) into v_total from public.notifications
+   where link = '/talks/' || v_talk and profile_id = disc;
+  if v_total <> 1 then raise exception 'FALHA: o discipulo nao foi avisado do talk'; end if;
+
+  v_rascunho := public.salvar_talk(null, 9, 'Ainda em preparo', null, v_hoje + 7, null, null, null);
+
+  -- 22. o discipulo ve o publicado, nao ve o rascunho, e nao escreve ---------
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', u_disc, 'role', 'authenticated')::text, true);
+
+  if public.talk(v_talk) is null or public.talk(v_rascunho) is not null then
+    raise exception 'FALHA: alcance do talk errado para o discipulo';
+  end if;
+  if not exists (select 1 from public.arquivo_talk(v_talk, 'pdf')) then
+    raise exception 'FALHA: o discipulo nao consegue baixar o PDF publicado';
+  end if;
+  if public.talk(v_talk) -> 'leituras' <> 'null'::jsonb then
+    raise exception 'FALHA: o discipulo esta vendo quem abriu o talk';
+  end if;
+
+  falhou := false;
+  begin
+    perform public.salvar_talk(null, 1, 'Nao pode', null, v_hoje, null, null, null);
+  exception when insufficient_privilege then falhou := true;
+  end;
+  if not falhou then raise exception 'FALHA: discipulo criou talk'; end if;
+
+  perform public.abrir_talk(v_talk);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', u_lider, 'role', 'authenticated')::text, true);
+  if not exists (
+    select 1 from jsonb_array_elements(public.talk(v_talk) -> 'leituras') l
+     where l ->> 'id' = disc::text and l ->> 'abriuEm' is not null
+  ) then
+    raise exception 'FALHA: a lideranca nao ve que o discipulo abriu o talk';
+  end if;
+
+  perform set_config('request.jwt.claims', '', true);
+  raise notice 'semana no dia, relatorio e talk: 6 verificacoes passaram';
+end;
+$$;

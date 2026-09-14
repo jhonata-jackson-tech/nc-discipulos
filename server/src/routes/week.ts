@@ -30,8 +30,8 @@ weekRouter.post(
     const groupId = typeof req.body?.groupId === 'string' ? req.body.groupId : ''
     const startsOn = typeof req.body?.startsOn === 'string' ? req.body.startsOn : ''
 
-    if (!groupId || !startsOn) {
-      throw new HttpError(400, 'Informe o GC e a semana a gerar.')
+    if (!groupId || !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
+      throw new HttpError(400, 'Informe o GC e o dia em que a semana começa.')
     }
 
     const payload = await withUser(req.claims!, async (client) => {
@@ -53,12 +53,11 @@ weekRouter.post(
         )
       }
 
-      if ((input as unknown as { hasPublishedWeek?: boolean }).hasPublishedWeek) {
-        throw new HttpError(
-          409,
-          'Esta semana já foi publicada. Use a reorganização manual para ajustar os cuidados.',
-          'WEEK_ALREADY_PUBLISHED',
-        )
+      // A regra de quando uma semana pode (re)comecar mora no banco: aqui so
+      // evitamos rodar o algoritmo para uma gravacao que vai ser recusada.
+      const bloqueio = (input as unknown as { bloqueio?: string | null }).bloqueio
+      if (bloqueio) {
+        throw new HttpError(409, bloqueio, 'WEEK_LOCKED')
       }
 
       let result
@@ -76,6 +75,8 @@ weekRouter.post(
         [
           groupId,
           startsOn,
+          // O banco ainda pode encurtar: a semana termina na vespera da
+          // proxima que ja estiver publicada.
           addDays(startsOn, 6),
           (input as unknown as { seed: string }).seed,
           JSON.stringify(result.assignments),

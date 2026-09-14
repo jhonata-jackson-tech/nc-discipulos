@@ -80,6 +80,7 @@ export function usePublishWeek() {
       queryClient.invalidateQueries({ queryKey: ['week'] })
       queryClient.invalidateQueries({ queryKey: ['current-week'] })
       queryClient.invalidateQueries({ queryKey: ['assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['relatorio-semana'] })
       toast.success('Semana publicada. Todos foram avisados.')
     },
   })
@@ -95,7 +96,9 @@ export function useCloseWeek() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weeks'] })
       queryClient.invalidateQueries({ queryKey: ['week'] })
-      toast.success('Semana encerrada.')
+      queryClient.invalidateQueries({ queryKey: ['current-week'] })
+      queryClient.invalidateQueries({ queryKey: ['relatorio-semana'] })
+      toast.success('Semana encerrada. O relatório foi para a liderança.')
     },
   })
 }

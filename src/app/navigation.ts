@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Mic,
   CalendarCheck,
   CalendarRange,
   DoorOpen,
@@ -58,6 +59,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['supervisor', 'leader', 'disciple', 'member'],
     primary: true,
     description: 'Talk, lanche, dinâmica e aniversariantes',
+  },
+  {
+    to: '/talks',
+    label: 'Talks',
+    icon: Mic,
+    roles: ['supervisor', 'leader', 'disciple'],
+    description: 'O material do GC da semana, e os das semanas anteriores',
   },
   {
     to: '/devocionais',

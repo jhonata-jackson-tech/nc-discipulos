@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ActivityResponseBadge } from '@/components/common/badges'
 import { PresencaPendente } from '@/features/attendance/presenca-pendente'
+import { TalkDaSemanaCard } from '@/features/talks/talk-da-semana-card'
 import type { CareWeek } from '@/types/database'
 import { TransfersInbox } from './transfers-inbox'
 import { GroupProgressCard } from './group-progress-card'
@@ -166,7 +167,7 @@ export function MyWeekPage() {
                 isLeader ? (
                   <Button asChild>
                     <Link to="/distribuicao">
-                      {encerrada || proxima ? 'Gerar a semana atual' : 'Gerar distribuição'}
+                      {encerrada || proxima ? 'Iniciar a semana' : 'Gerar distribuição'}
                     </Link>
                   </Button>
                 ) : undefined
@@ -180,6 +181,9 @@ export function MyWeekPage() {
           presença no fim do GC leva um minuto; reconstruir quem estava na sala
           uma semana depois não tem como. */}
       <PresencaPendente />
+
+      {/* Só quem conduz o GC alcança o talk; para os outros o banco nem devolve. */}
+      {role !== 'member' && <TalkDaSemanaCard />}
 
       {pendingTransfers.length > 0 && (
         <Alert variant="info">

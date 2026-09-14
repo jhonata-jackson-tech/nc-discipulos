@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CalendarRange } from 'lucide-react'
+import { CalendarRange, FileChartColumn } from 'lucide-react'
 import { useWeeks } from '@/features/care/use-care'
 import { formatDate, formatWeekRange } from '@/lib/date'
 import { PageHeader } from '@/components/common/page-header'
@@ -8,7 +8,14 @@ import { CardListSkeleton, ErrorState } from '@/components/common/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export function WeeksPage() {
   const weeks = useWeeks()
@@ -17,7 +24,7 @@ export function WeeksPage() {
     <div className="space-y-5">
       <PageHeader
         title="Semanas de cuidado"
-        description="Histórico das distribuições geradas, publicadas e encerradas."
+        description="Histórico das distribuições. Cada semana encerrada tem o relatório completo do cuidado."
         actions={
           <Button asChild variant="outline">
             <Link to="/distribuicao">Ir para a distribuição</Link>
@@ -50,6 +57,7 @@ export function WeeksPage() {
                 <TableHead>Gerada em</TableHead>
                 <TableHead>Publicada em</TableHead>
                 <TableHead>Avisos</TableHead>
+                <TableHead className="text-right">Relatório</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -71,6 +79,20 @@ export function WeeksPage() {
                     {week.generation_report?.warnings.length
                       ? `${week.generation_report.warnings.length} aviso(s)`
                       : '—'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {week.status !== 'draft' && (
+                      <Button
+                        asChild
+                        size="sm"
+                        variant={week.status === 'closed' ? 'outline' : 'ghost'}
+                      >
+                        <Link to={`/agenda/${week.id}`}>
+                          <FileChartColumn aria-hidden />
+                          {week.status === 'closed' ? 'Ver' : 'Parcial'}
+                        </Link>
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

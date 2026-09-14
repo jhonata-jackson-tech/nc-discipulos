@@ -19,7 +19,7 @@ import {
   type ActivityWithAssignees,
 } from './use-activities'
 import { ActivityDialog } from './activity-dialog'
-import { formatDate, formatWeekRange, relativeDeadline, startOfWeek } from '@/lib/date'
+import { formatDate, formatWeekRange, relativeDeadline, todayISO } from '@/lib/date'
 import { activityResponseLabel, activityTypeLabel, weekStatusLabel } from '@/lib/labels'
 import type { ActivityResponse } from '@/types/database'
 import { PageHeader } from '@/components/common/page-header'
@@ -71,7 +71,8 @@ export function ActivitiesPage() {
 
   // A semana em foco e derivada: enquanto ninguem escolher outra, vale a
   // semana corrente.
-  const thisWeek = startOfWeek()
+  // A semana ja nao comeca sempre na segunda: vale a que comecou ate hoje.
+  const thisWeek = todayISO()
   const defaultWeek =
     weeks.data?.find((week) => week.status !== 'draft' && week.starts_on <= thisWeek) ??
     weeks.data?.[0]

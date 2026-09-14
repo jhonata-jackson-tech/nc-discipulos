@@ -14,6 +14,7 @@ import { ouvirNotificacoes } from './push.ts'
 import { ligarRelogio } from './relogio.ts'
 import { authRouter } from './routes/auth.ts'
 import { pushRouter } from './routes/push.ts'
+import { talksRouter } from './routes/talks.ts'
 import { weekRouter } from './routes/week.ts'
 
 const app = express()
@@ -29,8 +30,8 @@ app.use(express.json({ limit: '256kb' }))
 if (config.corsOrigin) {
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', config.corsOrigin)
-    res.header('Access-Control-Allow-Headers', 'authorization, content-type')
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.header('Access-Control-Allow-Headers', 'authorization, content-type, x-nome-arquivo')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     if (req.method === 'OPTIONS') {
       res.status(204).end()
       return
@@ -49,6 +50,7 @@ app.get('/saude', (_req, res) => {
 app.use('/auth', authRouter)
 app.use('/api', weekRouter)
 app.use('/api', pushRouter)
+app.use('/api', talksRouter)
 
 app.use(errorHandler)
 

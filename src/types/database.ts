@@ -71,6 +71,7 @@ export type SupervisionUrgency = 'low' | 'normal' | 'high'
 
 export type NotificationType =
   | 'devotional'
+  | 'talk'
   | 'week_published'
   | 'assignment_new'
   | 'activity_assigned'
@@ -340,4 +341,159 @@ export interface DevotionalCard {
 
 export interface Devotional extends Omit<DevotionalCard, 'resumo'> {
   corpo: string
+}
+
+// ================================================== relatorio de uma semana
+
+/** Como a pessoa terminou a semana, do ponto de vista do cuidado. */
+export type SituacaoDoCuidado = 'cuidada' | 'sem_resposta' | 'sem_contato'
+
+/**
+ * Quanto do combinado quem cuida fez nesta semana.
+ *
+ * `nenhum` é "não registrou nada" — o que não é o mesmo que "não cuidou": o
+ * relatório só enxerga o que foi registrado, e a tela diz isso.
+ */
+export type SituacaoDoCuidador = 'todos' | 'parte' | 'nenhum'
+
+/**
+ * Como quem cuida vem indo nas últimas semanas, e não só nesta.
+ *
+ * `pouco_historico` existe para ninguém ser julgado por uma semana só.
+ */
+export type AvaliacaoDoCuidador = 'constante' | 'oscilando' | 'ausente' | 'pouco_historico'
+
+export interface RelatorioSemanaPessoaDoCuidador {
+  id: string
+  nome: string
+  nomeCompleto: string
+  situacao: SituacaoDoCuidado
+  contatoEm: string | null
+  canal: ContactChannel | null
+  comoEsta: WellBeing | null
+  vemAoGc: GcIntent | null
+}
+
+export interface RelatorioSemanaCuidador {
+  id: string
+  nome: string
+  nomeCompleto: string
+  papel: AppRole
+  genero: CareGender | null
+  total: number
+  feitos: number
+  tentativas: number
+  semContato: number
+  situacao: SituacaoDoCuidador
+  avaliacao: AvaliacaoDoCuidador
+  constancia: {
+    semanas: number
+    combinados: number
+    feitos: number
+    tentativas: number
+    taxa: number
+  }
+  historico: { inicio: string; total: number; feitos: number; tentativas: number }[]
+  pessoas: RelatorioSemanaPessoaDoCuidador[]
+}
+
+export interface RelatorioSemanaPessoa {
+  id: string
+  nome: string
+  nomeCompleto: string
+  papel: AppRole
+  genero: CareGender | null
+  cuidadorId: string
+  cuidador: string
+  situacao: SituacaoDoCuidado
+  contatoEm: string | null
+  registros: number
+  canal: ContactChannel | null
+  comoEsta: WellBeing | null
+  vemAoGc: GcIntent | null
+  atencao: AttentionLevel
+  observacao: string | null
+  ultimoCuidado: string | null
+  semanasSemCuidado: number
+}
+
+export interface RelatorioSemanaSemCuidado {
+  id: string
+  nome: string
+  nomeCompleto: string
+  papel: AppRole
+  genero: CareGender | null
+  ultimoCuidado: string | null
+  /** Nulo quando a pessoa nunca teve um cuidado com resposta registrado. */
+  dias: number | null
+  semanasSemCuidado: number
+  cuidadorNaSemana: string | null
+}
+
+export interface RelatorioSemana {
+  semana: {
+    id: string
+    inicio: string
+    fim: string
+    situacao: CareWeekStatus
+    publicadaEm: string | null
+    encerradaEm: string | null
+  }
+  resumo: {
+    combinados: number
+    cuidados: number
+    semResposta: number
+    semContato: number
+    precisamDaLideranca: number
+    vemAoGc: number
+    cuidadores: number
+    anterior: { combinados: number; cuidados: number } | null
+  }
+  cuidadores: RelatorioSemanaCuidador[]
+  pessoas: RelatorioSemanaPessoa[]
+  semCuidadoHaMais: RelatorioSemanaSemCuidado[]
+  transferencias: {
+    pessoa: string
+    de: string | null
+    para: string
+    origem: AssignmentOrigin
+    quando: string | null
+  }[]
+  geradoEm: string
+}
+
+// ==================================================================== talks
+
+export type TalkStatus = 'draft' | 'published'
+export type TalkArquivoTipo = 'pdf' | 'arte' | 'capa'
+
+export interface TalkArquivo {
+  nome: string | null
+  tamanho: number
+  /** Muda quando o arquivo muda: entra no endereço para o navegador guardar. */
+  versao: number
+}
+
+export interface TalkCard {
+  id: string
+  numero: number | null
+  tema: string
+  serie: string | null
+  semanaDe: string
+  situacao: TalkStatus
+  publicadoEm: string | null
+  spotifyUrl: string | null
+  youtubeUrl: string | null
+  arquivos: Partial<Record<TalkArquivoTipo, TalkArquivo>>
+  euAbri: boolean
+  /** Só para a liderança. */
+  aberturas: number | null
+}
+
+export interface Talk extends Omit<TalkCard, 'aberturas'> {
+  mensagem: string | null
+  /** Quem conduz o GC e quando abriu. Só para a liderança. */
+  leituras:
+    | { id: string; nome: string; nomeCompleto: string; papel: AppRole; abriuEm: string | null }[]
+    | null
 }

@@ -38,6 +38,7 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Troca de senha pelo próprio integrante                                | ✅       |
 | Papéis, integrantes, discipulado e restrições de rodízio              | ✅       |
 | Geração da semana no servidor, revisão, reorganização e publicação    | ✅       |
+| Semana que começa no dia escolhido, e se encerra sozinha no fim       | ✅       |
 | Minha semana, registro de contato, feedback e níveis de atenção       | ✅       |
 | Transferência com aceite e reorganização auditada do líder            | ✅       |
 | Atividades com múltiplos responsáveis e recorrência                   | ✅       |
@@ -46,6 +47,8 @@ e discípulos e líderes têm um canal reservado com a supervisão.
 | Visitantes: cadastro, contatos da liderança, entrada no GC e desfecho | ✅       |
 | Chamada do GC no fim do encontro, com faltas seguidas no relatório    | ✅       |
 | Relatórios com séries semana a semana e mapa de constância            | ✅       |
+| Relatório de encerramento: quem cuidou de quem e há quanto tempo sem  | ✅       |
+| Talks da semana: PDF, arte e playlists, só para quem conduz o GC      | ✅       |
 | Perfil (só ver) separado de Configurações (alterar)                   | ✅       |
 | Notificações internas                                                 | ✅       |
 | PWA instalável com cache do shell                                     | ✅       |

@@ -5,7 +5,7 @@ import { useSession } from '@/features/auth/session-context'
 import { useAssignments, useWeeks } from './use-care'
 import { useCareActions } from './use-care-actions'
 import { CareCard } from './care-card'
-import { formatWeekRange, startOfWeek } from '@/lib/date'
+import { formatWeekRange, todayISO } from '@/lib/date'
 import {
   assignmentOriginLabel,
   assignmentStatusLabel,
@@ -62,7 +62,8 @@ export function CarePage() {
 
   // Sem escolha explicita, abrimos na semana corrente - nao na semana futura
   // que porventura ja tenha sido publicada.
-  const thisWeek = startOfWeek()
+  // A semana ja nao comeca sempre na segunda: vale a que comecou ate hoje.
+  const thisWeek = todayISO()
   const defaultWeek =
     visibleWeeks.find((week) => week.status !== 'draft' && week.starts_on <= thisWeek) ??
     visibleWeeks[0]

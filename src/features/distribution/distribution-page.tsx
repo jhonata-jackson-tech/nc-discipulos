@@ -1,9 +1,12 @@
 import * as React from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
+  CalendarCheck2,
   CalendarPlus,
   CalendarX2,
   CheckCircle2,
+  FileChartColumn,
   Info,
   Repeat,
   Send,
@@ -24,7 +27,7 @@ import {
   usePublishWeek,
   useSetDraftAssignment,
 } from './use-distribution'
-import { addDays, formatWeekRange, startOfWeek, todayISO } from '@/lib/date'
+import { formatWeekRange, todayISO } from '@/lib/date'
 import { careGenderShort, weekStatusLabel } from '@/lib/labels'
 import { PageHeader } from '@/components/common/page-header'
 import { WeekStatusBadge } from '@/components/common/badges'
@@ -63,6 +66,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { DraftBoard } from './draft-board'
+import { IniciarSemanaDialog } from './iniciar-semana-dialog'
+import { semanaDoDia } from './nova-semana'
 import type { PoolReportRow } from '@/types/database'
 
 export function DistributionPage() {
@@ -74,9 +79,12 @@ export function DistributionPage() {
   const setDraftAssignment = useSetDraftAssignment()
   const members = useActiveMembers()
 
-  const thisMonday = startOfWeek()
-  const nextMonday = startOfWeek(addDays(todayISO(), 7))
+  const navegar = useNavigate()
+  const hoje = todayISO()
   const [chosenWeekId, setChosenWeekId] = React.useState<string | null>(null)
+  // A chave remonta o diálogo a cada abertura: a data volta a nascer em hoje,
+  // em vez de lembrar o dia escolhido da última vez.
+  const [iniciando, setIniciando] = React.useState<{ chave: number } | null>(null)
 
   // O rascunho em aberto e o ponto de partida natural desta tela.
   const reassign = useReassignCare()
@@ -90,21 +98,23 @@ export function DistributionPage() {
   const assignments = useAssignments(week?.id)
 
   const report = week?.generation_report
-  const alreadyHasNextWeek = weeks.data?.some((item) => item.starts_on === nextMonday)
 
-  // Gerar sempre "a proxima" tem um buraco: quem gera na propria segunda pula a
-  // semana corrente, e o GC inteiro fica sem cuidado ate a outra comecar. Se a
-  // semana de hoje nao existe, ela vira o primeiro pedido da tela.
+  // A pergunta que importa nao e "existe a semana de segunda?", e "o GC tem uma
+  // lista valendo hoje?". Um rascunho que cobre hoje nao conta: ninguem o ve.
   const faltaSemanaAtual =
-    weeks.isSuccess &&
-    (weeks.data?.length ?? 0) > 0 &&
-    !weeks.data?.some((item) => item.starts_on === thisMonday)
+    weeks.isSuccess && (weeks.data?.length ?? 0) > 0 && !semanaDoDia(weeks.data ?? [], hoje)
+  const rascunhoDeHoje = weeks.data?.find(
+    (item) => item.status === 'draft' && item.starts_on <= hoje && hoje <= item.ends_on,
+  )
 
   const handleGenerate = async (startsOn: string) => {
     if (!group) return
     const result = await generate.mutateAsync({ groupId: group.id, startsOn })
     setChosenWeekId(result.weekId)
+    setIniciando(null)
   }
+
+  const abrirIniciar = () => setIniciando({ chave: Date.now() })
 
   const pendingGender = (members.data ?? []).filter(
     (member) =>
@@ -117,27 +127,10 @@ export function DistributionPage() {
         title="Distribuição semanal"
         description="Gere o rascunho, confira a carga de cada cuidador e publique quando estiver certo."
         actions={
-          <div className="flex flex-wrap gap-2">
-            {faltaSemanaAtual && (
-              <Button
-                onClick={() => handleGenerate(thisMonday)}
-                loading={generate.isPending}
-                disabled={pendingGender.length > 0}
-              >
-                <CalendarPlus aria-hidden />
-                Gerar a semana atual
-              </Button>
-            )}
-            <Button
-              variant={faltaSemanaAtual ? 'outline' : 'default'}
-              onClick={() => handleGenerate(nextMonday)}
-              loading={generate.isPending}
-              disabled={pendingGender.length > 0}
-            >
-              {!faltaSemanaAtual && <CalendarPlus aria-hidden />}
-              {alreadyHasNextWeek ? 'Regerar próxima semana' : 'Gerar próxima semana'}
-            </Button>
-          </div>
+          <Button onClick={abrirIniciar} disabled={pendingGender.length > 0}>
+            <CalendarPlus aria-hidden />
+            Iniciar semana
+          </Button>
         }
       />
 
@@ -145,14 +138,28 @@ export function DistributionPage() {
         <Alert variant="warning">
           <CalendarX2 aria-hidden />
           <div className="min-w-0 flex-1">
-            <AlertTitle>
-              A semana de {formatWeekRange(thisMonday, addDays(thisMonday, 6))} está sem
-              distribuição
-            </AlertTitle>
+            <AlertTitle>Hoje o GC está sem uma semana de cuidado valendo</AlertTitle>
             <AlertDescription>
-              Enquanto ela não for gerada e publicada, ninguém do GC vê cuidados na home — nem mesmo
-              se a próxima semana já estiver publicada.
+              {rascunhoDeHoje
+                ? `O rascunho de ${formatWeekRange(rascunhoDeHoje.starts_on, rascunhoDeHoje.ends_on)} já cobre hoje — falta publicar para todo mundo ver.`
+                : 'Enquanto uma semana que cubra hoje não for gerada e publicada, ninguém do GC vê cuidados na home.'}
             </AlertDescription>
+            <div className="mt-3">
+              {rascunhoDeHoje ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setChosenWeekId(rascunhoDeHoje.id)}
+                >
+                  Abrir o rascunho
+                </Button>
+              ) : (
+                <Button size="sm" onClick={abrirIniciar} disabled={pendingGender.length > 0}>
+                  <CalendarPlus aria-hidden />
+                  Iniciar a semana hoje
+                </Button>
+              )}
+            </div>
           </div>
         </Alert>
       )}
@@ -184,8 +191,9 @@ export function DistributionPage() {
               title="Nenhuma semana gerada ainda"
               description="Gere a primeira distribuição para começar o ciclo de cuidado."
               action={
-                <Button onClick={() => handleGenerate(startOfWeek())} loading={generate.isPending}>
-                  Gerar a semana atual
+                <Button onClick={abrirIniciar} disabled={pendingGender.length > 0}>
+                  <CalendarPlus aria-hidden />
+                  Iniciar a primeira semana
                 </Button>
               }
             />
@@ -236,14 +244,45 @@ export function DistributionPage() {
                 </AlertDialog>
               )}
 
-              {week?.status === 'published' && (
-                <Button
-                  variant="outline"
-                  onClick={() => close.mutate(week.id)}
-                  loading={close.isPending}
-                >
-                  Encerrar semana
+              {week && week.status !== 'draft' && (
+                <Button asChild variant="outline">
+                  <Link to={`/agenda/${week.id}`}>
+                    <FileChartColumn aria-hidden />
+                    {week.status === 'closed' ? 'Ver relatório' : 'Relatório parcial'}
+                  </Link>
                 </Button>
+              )}
+
+              {week?.status === 'published' && week.starts_on <= hoje && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" loading={close.isPending}>
+                      <CalendarCheck2 aria-hidden />
+                      Encerrar semana
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogTitle>Encerrar esta semana?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {week.ends_on > hoje
+                        ? 'Ela termina hoje, antes do previsto. '
+                        : 'Ela já chegou ao fim. '}
+                      O relatório completo vai para a liderança — quem cuidou de quem, quem ficou
+                      sem cuidado e quem está há mais tempo sem contato. Se você não encerrar, ela
+                      se encerra sozinha na manhã seguinte ao último dia.
+                    </AlertDialogDescription>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Voltar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() =>
+                          close.mutate(week.id, { onSuccess: () => navegar(`/agenda/${week.id}`) })
+                        }
+                      >
+                        Encerrar e ver o relatório
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </CardContent>
@@ -297,6 +336,18 @@ export function DistributionPage() {
             setDraftAssignment.mutate({ weekId: week.id, caredForId, caregiverId })
           }
           onReassign={(assignment, caregiverId) => setRemanejando({ assignment, caregiverId })}
+        />
+      )}
+
+      {iniciando && (
+        <IniciarSemanaDialog
+          key={iniciando.chave}
+          open
+          onOpenChange={(aberto) => !aberto && setIniciando(null)}
+          semanas={weeks.data ?? []}
+          gerando={generate.isPending}
+          bloqueadoPorGenero={pendingGender.length > 0}
+          onGerar={(inicio) => void handleGenerate(inicio).catch(() => undefined)}
         />
       )}
 

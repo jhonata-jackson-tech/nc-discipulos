@@ -45,6 +45,15 @@ const AttendancePage = lazy(() =>
 const SupervisionPage = lazy(() =>
   import('@/features/supervision/supervision-page').then((m) => ({ default: m.SupervisionPage })),
 )
+const WeekReportPage = lazy(() =>
+  import('@/features/reports/week-report-page').then((m) => ({ default: m.WeekReportPage })),
+)
+const TalksPage = lazy(() =>
+  import('@/features/talks/talks-page').then((m) => ({ default: m.TalksPage })),
+)
+const TalkPage = lazy(() =>
+  import('@/features/talks/talk-page').then((m) => ({ default: m.TalkPage })),
+)
 const ReportsPage = lazy(() =>
   import('@/features/reports/reports-page').then((m) => ({ default: m.ReportsPage })),
 )
@@ -128,6 +137,10 @@ export const router = createBrowserRouter([
                     children: [
                       { path: '/cuidados', element: <CarePage /> },
                       { path: '/supervisao', element: <SupervisionPage /> },
+                      // O talk é de quem conduz o GC. A guarda aqui só evita a
+                      // tela vazia; quem decide o que sai é o banco.
+                      { path: '/talks', element: <TalksPage /> },
+                      { path: '/talks/:id', element: <TalkPage /> },
                     ],
                   },
                   {
@@ -141,6 +154,7 @@ export const router = createBrowserRouter([
                       { path: '/presenca', element: <AttendancePage /> },
                       { path: '/relatorios', element: <ReportsPage /> },
                       { path: '/agenda', element: <WeeksPage /> },
+                      { path: '/agenda/:id', element: <WeekReportPage /> },
                     ],
                   },
                   {
